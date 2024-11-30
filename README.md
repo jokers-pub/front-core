@@ -1,4 +1,4 @@
-# Joker [![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)] [![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)]
+# Joker ![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore) ![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)
 
 A Front-End Framework with a Built-in Low-Code Platform
 [Low-Code Platform](https://lowcode.jokers.pub)
