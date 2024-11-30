@@ -1,4 +1,4 @@
-# Joker
+# Joker [![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)] [![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)]
 
 A Front-End Framework with a Built-in Low-Code Platform
 [Low-Code Platform](https://lowcode.jokers.pub)
@@ -74,7 +74,7 @@ Upon successful execution, a simple sample page will be displayed.
 [Official UI Library](http://ui.jokers.pub)
 [Low-Code Platform](http://jokers.pub)
 
-# Joker
+# Joker [![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)] [![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)]
 
 一个自带低代码平台的前端框架
 [低代码平台](https://lowcode.jokers.pub)
