@@ -17,11 +17,6 @@ Joker is an all-round development platform constructed with TypeScript. It exhib
 -   **Class API**: Joker utilizes TypeScript as the scripting development standard and adopts the standard Class API as the development guideline, which better aligns with object-oriented development requirements.
 -   **Responsiveness**: Joker automatically tracks the state of JavaScript and updates the DOM in a reactive manner when changes occur. The reactive updates are instantaneous and do not involve virtual DOM difference comparison.
 
-## More User-Friendly Command Syntax
-
-![Syntax Explanation](readme/img1.png)
-![Syntax Explanation](readme/img2.png)
-
 ## How to Use
 
 You can utilize the Joker CLI to create projects, generate application and library code, and carry out various continuous development tasks such as testing, packaging, and deployment.
@@ -94,11 +89,6 @@ Joker 是一个基于 TypeScript 构建的全能开发平台。无论是应对�
 -   **完善的开发工具**：为进一步提升开发效率，Joker 还提供了一系列配套的开发工具，包括调试工具、构建工具等。这些精心设计的工具旨在让开发流程更加顺畅，助力开发者准确快速地开发、构建、测试以及更新代码。
 -   **Class API**：Joker 以 TypeScript 作为脚本开发标准，并采用标准的 Class API 作为开发规范，更契合面向对象开发的要求。
 -   **响应性**：Joker 会自动追踪 JavaScript 状态，当其发生变化时能即时响应式地更新 DOM，且不存在虚拟 DOM 的差异对比。
-
-## 更友好的命令语法
-
-![语法说明](readme/img1.png)
-![语法说明](readme/img2.png)
 
 ## 如何使用
 
