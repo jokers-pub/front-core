@@ -1,6 +1,6 @@
 import { AST, EXPRESSHANDLERTAG } from "@joker.front/ast";
-import { isPlainObject, foEachProperties, hasProperty, logger, isEqual, guid } from "@joker.front/shared";
-import { defineObserverProperty } from "../../observer";
+import { isPlainObject, foEachProperties, guid } from "@joker.front/shared";
+import { defineObserverProperty, isObserverData } from "../../observer";
 import { ObType } from "../index";
 import { IParser } from "../parser";
 import { VNode } from "../vnode";
@@ -78,19 +78,32 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                 defineObserverProperty(stepOb, param.letKey, forOb[param.letKey]);
 
                 let currentIndex = index++;
-                renderPrimaryArr.push(
-                    this.renderItem(stepOb, currentIndex).then(() => {
-                        if (this.renderId !== renderId) return;
-                        this.runExpressWithWatcher(
-                            () => forOb[param.letKey],
-                            forOb,
-                            (newVal) => {
-                                stepOb[param.letKey] = newVal;
-                                this.renderItem(stepOb, currentIndex);
-                            }
-                        );
-                    })
-                );
+
+                let result = this.renderItem(stepOb, currentIndex);
+
+                let nextExec = () => {
+                    if (this.renderId !== renderId) return;
+                    this.runExpressWithWatcher(
+                        () => forOb[param.letKey],
+                        forOb,
+                        (newVal, _, isEqual, watcher) => {
+                            //通过异步等待，防止数组变更后带来的整个列表重新计算
+                            Promise.resolve().then(() => {
+                                if (watcher.isDestroy) return;
+                                stepOb[param.letKey!] = newVal;
+                                if (!isEqual) {
+                                    this.updateListItemOb(stepOb, currentIndex);
+                                }
+                            });
+                        },
+                        true
+                    );
+                };
+                if (result instanceof Promise) {
+                    renderPrimaryArr.push(result.then(() => nextExec()));
+                } else {
+                    nextExec();
+                }
 
                 //执行下一次循环设值
                 this.runExpress(param.step, forOb);
@@ -98,10 +111,15 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                 breakVal = !!this.runExpress(param.condition, forOb);
             }
 
-            await Promise.all(renderPrimaryArr).then(() => {
+            if (renderPrimaryArr.length) {
+                await Promise.all(renderPrimaryArr).then(() => {
+                    if (this.renderId !== renderId) return;
+                    this.destroyOldChildrens(index);
+                });
+            } else {
                 if (this.renderId !== renderId) return;
                 this.destroyOldChildrens(index);
-            });
+            }
         };
 
         await execRender(this.renderId);
@@ -120,8 +138,8 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
 
         let execRender = async (renderId?: string) => {
             let index = 0;
+            let renderPrimaryArr: Array<Promise<any>> = [];
             if (listOb && (Array.isArray(listOb) || isPlainObject(listOb))) {
-                let renderPrimaryArr: Array<Promise<any>> = [];
                 for (let key in listOb) {
                     let stepOb = Object.create(this.ob);
                     let keyVal = Array.isArray(listOb) ? Number(key) : key;
@@ -134,31 +152,64 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                         defineObserverProperty(stepOb, param.itemKey, listOb[key]);
                     }
                     let currentIndex = index++;
-                    renderPrimaryArr.push(
-                        this.renderItem(stepOb, currentIndex).then(() => {
-                            if (this.renderId !== renderId) return;
-                            if (param.itemKey) {
-                                this.runExpressWithWatcher(
-                                    //@ts-ignore
-                                    () => listOb[keyVal],
-                                    listOb,
-                                    (newVal) => {
-                                        stepOb[param.itemKey!] = newVal;
-                                        this.renderItem(stepOb, currentIndex);
-                                    }
-                                );
-                            }
-                        })
-                    );
-                }
 
-                await Promise.all(renderPrimaryArr);
+                    let nextExec = () => {
+                        if (this.renderId !== renderId) return;
+                        if (param.itemKey) {
+                            this.runExpressWithWatcher(
+                                //@ts-ignore
+                                () => listOb[keyVal],
+                                listOb,
+                                (newVal, _, isEqual, watcher) => {
+                                    if (keyVal in listOb) {
+                                        //通过异步等待，防止数组变更后带来的整个列表重新计算
+                                        Promise.resolve().then(() => {
+                                            if (watcher.isDestroy) return;
+                                            stepOb[param.itemKey!] = newVal;
+                                            if (!isEqual) {
+                                                this.updateListItemOb(stepOb, currentIndex);
+                                            }
+                                        });
+                                    }
+                                },
+                                true
+                            );
+                        }
+                    };
+                    let result = this.renderItem(stepOb, currentIndex, param.indexKey);
+
+                    if (result instanceof Promise) {
+                        renderPrimaryArr.push(result.then(() => nextExec()));
+                    } else {
+                        nextExec();
+                    }
+                }
             }
-            if (this.renderId !== renderId) return;
-            this.destroyOldChildrens(index);
+            if (renderPrimaryArr.length) {
+                await Promise.all(renderPrimaryArr).then(() => {
+                    if (this.renderId !== renderId) return;
+                    this.destroyOldChildrens(index);
+                });
+            } else {
+                if (this.renderId !== renderId) return;
+                this.destroyOldChildrens(index);
+            }
         };
 
         await execRender(this.renderId);
+    }
+
+    findIndexByIndex(ob: ObType, startIndex: number, indexKey?: string) {
+        let nextIndex = -1;
+        if (this.node) {
+            for (let i = startIndex; i < this.node.childrens.length; i++) {
+                if (this.checkObEqual(ob, this.node.childrens[i]?.ob, indexKey ? [indexKey] : undefined)) {
+                    nextIndex = i;
+                    break;
+                }
+            }
+        }
+        return nextIndex;
     }
 
     /**
@@ -166,32 +217,63 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
      * @param ob
      * @param index
      */
-    private async renderItem(ob: ObType, index: number) {
-        if (!this.ast.childrens?.length) {
+    private renderItem(ob: ObType, index: number, indexKey?: string): any {
+        if (!this.ast.childrens?.length || !this.node) {
             return;
         }
 
-        let stepList = this.node?.childrens?.[index];
+        let stepList = this.node.childrens?.[index];
+
         //若已经存在，则响应变更
         if (stepList) {
-            if (this.checkObEqual(ob, stepList.ob)) return;
-
-            //本来想做移除项单条移除的，但是无法精准控制，需要考虑 相邻项交换问题
-            foEachProperties(ob, (key: PropertyKey, val: any) => {
-                //@ts-ignore
-                if (stepList!.ob[key] !== val) {
-                    //新老值不一致时
-
-                    //设置值，做值变更通知
-                    //@ts-ignore
-                    stepList!.ob[key] = val;
+            if (this.checkObEqual(ob, stepList.ob, indexKey ? [indexKey] : undefined)) {
+                //做一次index 同步
+                if (indexKey && stepList.ob[indexKey] !== ob[indexKey]) {
+                    stepList.ob[indexKey] = ob[indexKey];
                 }
-            });
+                return;
+            }
+
+            let nextIndex = this.findIndexByIndex(ob, index + 1, indexKey);
+
+            if (nextIndex > -1) {
+                //删除
+                if (index + 1 === nextIndex) {
+                    this.node.childrens?.[index]?.[VNode.PARSERKEY]?.destroy();
+                } else {
+                    //删除同位索引项，相同位置删除几次
+                    for (let i = 0; i < nextIndex - index - 1; i++) {
+                        this.node.childrens?.[index]?.[VNode.PARSERKEY]?.destroy();
+                    }
+                }
+
+                return this.renderItem(ob, index, indexKey);
+            } else {
+                //新增
+                return new ParserListeItem(this.ast, ob, this.node!, this.ext).init(index);
+            }
         } else {
-            await new ParserListeItem(this.ast, ob, this.node!, this.ext).init();
+            return new ParserListeItem(this.ast, ob, this.node!, this.ext).init();
         }
     }
 
+    private updateListItemOb(ob: any, index: number) {
+        if (!this.ast.childrens?.length || !this.node) {
+            return;
+        }
+
+        let stepList = this.node.childrens?.[index];
+        foEachProperties(ob, (key: PropertyKey, val: any) => {
+            //@ts-ignore
+            if (stepList!.ob[key] !== val) {
+                //新老值不一致时
+
+                //设置值，做值变更通知
+                //@ts-ignore
+                stepList!.ob[key] = val;
+            }
+        });
+    }
     /**
      * 销毁历史遗留多余的节点
      * @param index
@@ -209,12 +291,12 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
         }
     }
 
-    private checkObEqual(newOb: ObType, oldOb?: any) {
+    private checkObEqual(newOb: ObType, oldOb?: any, excludeKey?: PropertyKey[]) {
         let equal = true;
         if (oldOb === undefined) return false;
 
         foEachProperties(newOb, (key: PropertyKey, val: any) => {
-            if (oldOb?.[key] !== val) {
+            if (!excludeKey?.includes(key) && oldOb?.[key] !== val) {
                 equal = false;
             }
         });
@@ -223,10 +305,10 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
 }
 
 export class ParserListeItem extends IParser<AST.ForCommand, VNode.ListItem> {
-    public async parser() {
+    public async parser(index?: number) {
         this.node = new VNode.ListItem(this.ob, this.parent);
 
-        this.appendNode();
+        this.appendNode(index);
 
         this.ast.childrens && (await this.ext.parserNodes(this.ast.childrens, this.node, this.ob));
     }

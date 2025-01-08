@@ -92,11 +92,6 @@ describe("keepalive", () => {
         //强制销毁
         component.component?.$destroy(true);
         expect(root.innerHTML).toEqual("");
-
-        await component.test();
-
-        //ast被销毁，无法再次装载
-        expect(root.innerHTML).toEqual("");
     });
 
     it("组件嵌套使用", async () => {

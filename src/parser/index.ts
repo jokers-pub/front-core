@@ -74,7 +74,7 @@ export class ParserTemplate {
         });
     }
 
-    public promiseQueue: Array<Promise<any>> = [];
+    public promiseQueue: Set<Promise<any>> = new Set();
     /**
      * 编译AST子集
      * @param asts
@@ -82,6 +82,7 @@ export class ParserTemplate {
      */
     public async parserNodes(asts: AST.Node[], parent: VNode.Node, ob?: Component & Record<string, any>) {
         if (this.asts.length === 0) return; //若被销毁责终止向下渲染
+
         for (let ast of asts) {
             if (this.asts.length === 0) return;
 
@@ -136,13 +137,16 @@ export class ParserTemplate {
 
             if (parseTarget) {
                 let promise = parseTarget.init();
-                this.promiseQueue.push(promise);
-                await promise.finally(() => {
-                    remove(this.promiseQueue, promise);
-                    if (this.asts.length === 0 && parseTarget && parseTarget.isDestroy === false) {
-                        parseTarget?.destroy();
-                    }
-                });
+                if (promise instanceof Promise) {
+                    this.promiseQueue.add(promise);
+                    await promise.finally(() => {
+                        this.promiseQueue.delete(promise as any);
+
+                        if (this.asts.length === 0 && parseTarget && parseTarget.isDestroy === false) {
+                            parseTarget?.destroy();
+                        }
+                    });
+                }
             }
         }
     }

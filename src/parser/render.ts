@@ -50,7 +50,7 @@ export namespace Render {
          * 添加节点
          * @param node NodeInfo
          */
-        appendNode(node: VNode.Node): void;
+        appendNode(node: VNode.Node, index?: number): void;
         /**
          * 更新节点
          * @param node NodeInfo
@@ -127,7 +127,7 @@ export namespace Render {
             }
         }
 
-        appendNode(node: VNode.Node): void {
+        appendNode(node: VNode.Node, index?: number): void {
             this.renderNode(node);
 
             if (node.output) {
@@ -139,7 +139,7 @@ export namespace Render {
                         : [node.output];
 
                 for (let item of nodes) {
-                    this.appendNodeChildren(node, item, node.parent);
+                    this.appendNodeChildren(node, item, node.parent, index);
                 }
 
                 return;
@@ -511,7 +511,7 @@ export namespace Render {
             );
         }
 
-        private appendNodeChildren(node: VNode.Node, element: Element, parent?: VNode.Node) {
+        private appendNodeChildren(node: VNode.Node, element: Element, parent?: VNode.Node, index?: number) {
             let parentEl = getVNodeAppendToContainer(node);
 
             if (parentEl) {
@@ -554,6 +554,23 @@ export namespace Render {
                     let nodeEl = parent.output as Element;
                     //如果if 或者 for循环中存在 append-to 则直接向body输出，不考虑body输出顺序
                     let parentEl = nodeEl?.parentNode;
+
+                    if (index !== undefined && parent.childrens?.length && parentEl) {
+                        let prevNodeIndex = index - 1;
+                        if (prevNodeIndex < 0) {
+                            parentEl.insertBefore(element, parentEl.firstChild);
+                            return;
+                        } else {
+                            let prevNode = parent.childrens[prevNodeIndex];
+                            if (prevNode) {
+                                let appendNodeTag = <HTMLElement>prevNode.output;
+                                if (appendNodeTag) {
+                                    appendNodeTag.after(element);
+                                    return;
+                                }
+                            }
+                        }
+                    }
 
                     //不会出现没有parentEl的场景
                     if (parentEl) {

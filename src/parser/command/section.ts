@@ -44,25 +44,30 @@ export class ParserRenderSection extends IParser<AST.PropertyOrFunctionCommand, 
 
     private transformParam() {
         if (this.ast.param) {
-            let expressVal = this.runExpressWithWatcher(`[${this.ast.param}]`, this.ob, (newVal) => {
-                let newSectionId = newVal?.[0] || DEFAULT_SECTION_TAG;
+            let expressVal = this.runExpressWithWatcher(
+                `[${this.ast.param}]`,
+                this.ob,
+                (newVal) => {
+                    let newSectionId = newVal?.[0] || DEFAULT_SECTION_TAG;
 
-                if (typeof newSectionId === "string" && newSectionId !== this.node!.id) {
-                    throw new Error("section id 不可动态变更");
-                }
+                    if (typeof newSectionId === "string" && newSectionId !== this.node!.id) {
+                        throw new Error("section id 不可动态变更");
+                    }
 
-                this.node!.params = newVal.slice(1);
+                    this.node!.params = newVal.slice(1);
 
-                if (this.node?.ob && this.node.section) {
-                    this.node.section.params?.forEach((item, index) => {
-                        if (this.node?.ob) {
-                            if (this.node.ob[item] !== this.node.params[index]) {
-                                this.node.ob[item] = this.node.params[index];
+                    if (this.node?.ob && this.node.section) {
+                        this.node.section.params?.forEach((item, index) => {
+                            if (this.node?.ob) {
+                                if (this.node.ob[item] !== this.node.params[index]) {
+                                    this.node.ob[item] = this.node.params[index];
+                                }
                             }
-                        }
-                    });
-                }
-            });
+                        });
+                    }
+                },
+                true
+            );
 
             return {
                 id: expressVal?.[0] || DEFAULT_SECTION_TAG,

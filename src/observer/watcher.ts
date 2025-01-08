@@ -1,4 +1,4 @@
-import { guid, isEqual, isObject, isPlainObject, logger } from "@joker.front/shared";
+import { isEqual, isObject, logger } from "@joker.front/shared";
 import { Dep } from "./dep";
 const LOGTAG = "数据观察";
 export const BREAK_WATCH_UPDATE = Symbol.for("JOKER_BREAK_WATCH_UPDATE");
@@ -35,7 +35,6 @@ function transformGetter(exp: string): Function | undefined {
  * 负责观察对象，并收集依赖关系，并在值变更时做出回调响应
  */
 export class Watcher<T extends object = any> {
-    id = guid();
     private getter!: Function;
 
     public value: any;
@@ -49,12 +48,12 @@ export class Watcher<T extends object = any> {
      * 主要作用是：运行时做基本的重复过滤,并收集当前“有效的”Dep关系
      * 一个Dep 肯定对应一个对象， 对象的key不会出现重复
      */
-    private runRelations: Map<Dep, Array<string | symbol>> = new Map();
+    private runRelations: Map<Dep, Array<string | symbol | number>> = new Map();
 
     /**
      * 实际关系
      */
-    public relations: Map<Dep, Array<string | symbol>> = new Map();
+    public relations: Map<Dep, Array<string | symbol | number>> = new Map();
 
     /**
      *
@@ -120,7 +119,7 @@ export class Watcher<T extends object = any> {
      * @param dep
      * @param key
      */
-    public addDep(dep: Dep, key: string | symbol) {
+    public addDep(dep: Dep, key: string | symbol | number) {
         let runItem = this.runRelations.get(dep);
 
         if (runItem === undefined || runItem.includes(key) === false) {
@@ -155,14 +154,16 @@ export class Watcher<T extends object = any> {
         if (this.forceCallBack || newVal !== oldVal || isObject(newVal)) {
             this.value = newVal;
 
-            //这里过滤一些引用不想等，但值相等的值，只是不做响应，但不影响下次的值变更
+            //这里过滤一些引用不相等，但值相等的值，只是不做响应，但不影响下次的值变更
             //这里没有过滤掉this.value = newVal;
-            if (newVal !== oldVal && !this.forceCallBack && isEqual(newVal, oldVal, true)) {
+
+            let isEqualValue = newVal !== oldVal && isEqual(newVal, oldVal, true);
+            if (isEqualValue && !this.forceCallBack) {
                 return;
             }
             this.updating = true;
             try {
-                this.updateCallBack(newVal, oldVal);
+                this.updateCallBack(newVal, oldVal, isEqualValue, this);
             } catch (e) {
                 throw e;
             } finally {

@@ -1,5 +1,5 @@
-import { AST, EXPRESSHANDLERTAG, IComponent } from "@joker.front/ast";
-import { isEmptyStr, isPlainObject, logger, noop } from "@joker.front/shared";
+import { AST, EXPRESSHANDLERTAG } from "@joker.front/ast";
+import { isEmptyStr, logger, noop } from "@joker.front/shared";
 import { IParser } from "./parser";
 import { JOKER_COMPONENT_TAG, getGlobalComponent } from "../component";
 import { Component, SectionType } from "../component";
@@ -28,7 +28,7 @@ export class ParserComponent extends IParser<
             //重新做层级挂载
             this.node.parent = this.parent;
             //唤醒时做一次 watcher同步
-            await this.initPropData();
+            this.initPropData();
             if (this.node) {
                 this.appendNode();
                 this.node.component?.$mount(this.node);
@@ -87,28 +87,33 @@ export class ParserComponent extends IParser<
             }
 
             if (attr.express) {
-                let watcherValue = this.runExpressWithWatcher(attr.express, this.ob, (newVal) => {
-                    let transformPromiseValue = resolveDeepPromisesInPlace(newVal);
-                    if (transformPromiseValue instanceof Promise) {
-                        transformPromiseValue
-                            .then((nv) => {
-                                if (this.node) {
-                                    this.node!.propValues[attr.name] = nv;
+                let watcherValue = this.runExpressWithWatcher(
+                    attr.express,
+                    this.ob,
+                    (newVal) => {
+                        let transformPromiseValue = resolveDeepPromisesInPlace(newVal);
+                        if (transformPromiseValue instanceof Promise) {
+                            transformPromiseValue
+                                .then((nv) => {
+                                    if (this.node) {
+                                        this.node!.propValues[attr.name] = nv;
 
-                                    // 不做render更新，数据变更广播会向下传递
-                                    this.notifyNodeWatcher("update", attr.name);
-                                }
-                            })
-                            .catch((e) => {
-                                logger.error(LOGTAG, `${attr.express}异步处理失败`, e);
-                            });
-                    } else {
-                        this.node!.propValues[attr.name] = transformPromiseValue;
+                                        // 不做render更新，数据变更广播会向下传递
+                                        this.notifyNodeWatcher("update", attr.name);
+                                    }
+                                })
+                                .catch((e) => {
+                                    logger.error(LOGTAG, `${attr.express}异步处理失败`, e);
+                                });
+                        } else {
+                            this.node!.propValues[attr.name] = transformPromiseValue;
 
-                        // 不做render更新，数据变更广播会向下传递
-                        this.notifyNodeWatcher("update", attr.name);
-                    }
-                });
+                            // 不做render更新，数据变更广播会向下传递
+                            this.notifyNodeWatcher("update", attr.name);
+                        }
+                    },
+                    true
+                );
 
                 let transformPromiseValue = resolveDeepPromisesInPlace(watcherValue);
 

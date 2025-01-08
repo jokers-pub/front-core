@@ -41,16 +41,18 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
         protected ext: ParserTemplate
     ) {}
 
-    async init() {
-        await this.parser();
+    init(index?: number) {
+        let promise = this.parser(index);
 
         this.afterParser();
+
+        if (promise) return promise;
     }
 
     /**
      * 上游主入口方法（初始化执行）
      */
-    public abstract parser(): void | Promise<void>;
+    public abstract parser(index?: number): void | Promise<void>;
 
     protected beforeDestroy(keepalive?: boolean): void | boolean {}
 
@@ -155,17 +157,21 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
     /**
      * 插入自身节点
      */
-    protected appendNode() {
+    protected appendNode(index?: number) {
         if (this.parent?.childrens && this.node && !this.isDestroy) {
             this.node[VNode.PARSERKEY] = this;
-
-            this.parent.childrens.push(this.node);
 
             if (this.node instanceof VNode.Element && this.ob[SCOPE_ID]) {
                 this.node.attributes["data-scoped-" + this.ob[SCOPE_ID]] = undefined;
             }
 
-            this.ext.render?.appendNode(this.node);
+            this.ext.render?.appendNode(this.node, index);
+
+            if (index === undefined) {
+                this.parent.childrens.push(this.node);
+            } else {
+                this.parent.childrens.splice(index, 0, this.node);
+            }
             this.notifyNodeWatcher("append");
         }
     }
@@ -194,9 +200,9 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
             return createExpress(express).call(ob, ob, __GLONAL_FUNTIONS__);
         } catch (e) {
             logger.error(LOGTAG, "运行表达式出现错误:" + express, {
-                ob,
-                e
+                ob
             });
+            console.error(e);
         }
     }
 
@@ -211,7 +217,7 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
     protected runExpressWithWatcher(
         express: string | Function,
         ob: any,
-        updateCallBack: (newVal: any, oldVal: any) => void,
+        updateCallBack: (newVal: any, oldVal: any, isEqul: boolean, wathcer: Watcher) => void,
         forceCallBack?: boolean
     ) {
         if (this.isDestroy) return;
@@ -227,10 +233,10 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
                 } catch (e) {
                     logger.error(LOGTAG, "运行表达式出现错误", {
                         ob,
-                        e,
                         express,
                         node: this.node
                     });
+                    console.error(e);
 
                     return BREAK_WATCH_UPDATE;
                 }

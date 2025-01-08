@@ -1,4 +1,10 @@
-import { isObserverData, OBJECTPROXY_DEPID, observer, ShallowObserver } from "../../src/observer";
+import {
+    defineObserverProperty,
+    isObserverData,
+    OBJECTPROXY_DEPID,
+    observer,
+    ShallowObserver
+} from "../../src/observer";
 
 describe(`数据劫持`, () => {
     let source = {
@@ -73,5 +79,27 @@ describe(`数据劫持`, () => {
         let data = observer(item);
 
         expect(isObserverData(data) && data === data.children[0].parent).toBe(true);
+    });
+
+    it("数据劫持，数据丢失测试", () => {
+        let source = class {
+            a = 1;
+        };
+
+        let data = observer(new source());
+        let a = Object.create(data);
+        defineObserverProperty(a, "temp", 1);
+
+        expect(a.temp).toBe(1);
+
+        let b = observer(a);
+
+        expect(b.temp).toBe(1);
+
+        let c = Object.create(b);
+
+        let d = observer(c);
+
+        expect(d.temp).toBe(1);
     });
 });

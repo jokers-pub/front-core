@@ -14,9 +14,22 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
 
             let conditionResult = this.runExpressWithWatcher(this.ast.condition, this.ob, (newVal) => {
                 let value = !!newVal;
+
                 if (this.node?.result !== value) {
                     this.node!.result = value;
-
+                    if (value === false && this.node?.isShow) {
+                        //第一时间销毁子集 销毁子集 避免子集做无效的值响应更新，if切换时，使用keepalive
+                        this.destroyChildrens(true);
+                    } else if (value && !this.node?.isShow) {
+                        //第一时间销毁else
+                        let elseNode = this.getElseNode();
+                        if (elseNode && elseNode.isShow && elseNode.childrens?.length) {
+                            let parserTarget = elseNode[VNode.PARSERKEY];
+                            if (parserTarget && parserTarget instanceof ParserCondition) {
+                                parserTarget.renderConditionChildren();
+                            }
+                        }
+                    }
                     this.renderId = guid();
                     this.reloadAllCondition(this.renderId);
                 }
@@ -33,7 +46,18 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
     }
 
     renderId?: string;
+    private getElseNode() {
+        let nextNode = this.node?.next;
+        //向上查询，获取级联条件结果
+        while (nextNode && nextNode instanceof VNode.Condition) {
+            if (nextNode.cmdName === "if") break;
 
+            if (nextNode.cmdName === "else") {
+                return nextNode;
+            }
+            nextNode = nextNode.next;
+        }
+    }
     /**
      * 渲染子集
      *
@@ -149,7 +173,6 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
                 let parserTarget = next[VNode.PARSERKEY];
 
                 if (parserTarget && parserTarget instanceof ParserCondition) {
-                    parserTarget.renderId = guid();
                     await parserTarget.renderConditionChildren();
 
                     if (renderId !== this.renderId) return;
@@ -164,15 +187,15 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
             if (!this.node?.result) {
                 this.destroyChildrens(true);
             }
+
             //有下一级 && 下一级是条件节点 && 下一级不是if起始
             while (next && next instanceof VNode.Condition && next.cmdName !== "if") {
                 let parserTarget = next[VNode.PARSERKEY];
 
                 if (parserTarget && parserTarget instanceof ParserCondition) {
-                    //做一次清理补偿
-                    if (!parserTarget.node?.isShow) {
-                        parserTarget.destroyChildrens(true);
-                    }
+                    await parserTarget.renderConditionChildren();
+
+                    if (renderId !== this.renderId) return;
                 }
 
                 next = next.next;

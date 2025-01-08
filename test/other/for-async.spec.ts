@@ -8,7 +8,7 @@ describe("for-async", () => {
                 return getAst(`
                 @for(let item of model.arr){
                     <ChildrenView param="@item" />
-                }    
+                }
                 `);
             };
             model = {

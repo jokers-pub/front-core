@@ -15,7 +15,7 @@ class ParentView extends Component {
         <div>
             <demo booleanValue booleanValue2="@false" time='@model.time' p2='2' @v1Change='onChange'>
                 <span>1</span>
-                @section('s1',v1){
+                @section('s1',v1,){
                     <b>@v1</b>
                 }
             </demo>

@@ -264,6 +264,92 @@ describe("watcher 依赖采集", () => {
         });
     });
 
+    describe("Set高级类型", () => {
+        let obj = observer({
+            v: new Set<any>()
+        });
+        let objChange = false;
+
+        new Watcher(
+            () => obj.v,
+            () => {
+                objChange = true;
+            }
+        );
+
+        obj.v.add("1");
+        expect(objChange).toBe(true);
+
+        objChange = false;
+        obj.v.delete("1");
+        expect(objChange).toBe(true);
+
+        obj.v.add("1");
+        objChange = false;
+        obj.v.clear();
+        expect(objChange).toBe(true);
+
+        //测试设值 也会数据劫持
+        objChange = false;
+        let obj1 = {
+            name: "1"
+        };
+
+        obj.v.add(obj1);
+        new Watcher(
+            () => obj1.name,
+            () => {
+                objChange = true;
+            }
+        );
+
+        obj1.name = "3";
+        expect(objChange).toBe(true);
+    });
+
+    describe("Map高级类型", () => {
+        let obj = observer({
+            v: new Map<string, any>()
+        });
+        let objChange = false;
+
+        new Watcher(
+            () => obj.v,
+            () => {
+                objChange = true;
+            }
+        );
+
+        obj.v.set("1", "1");
+        expect(objChange).toBe(true);
+
+        objChange = false;
+        obj.v.delete("1");
+        expect(objChange).toBe(true);
+
+        obj.v.set("1", "1");
+        objChange = false;
+        obj.v.clear();
+        expect(objChange).toBe(true);
+
+        //测试设值 也会数据劫持
+        objChange = false;
+        let obj1 = {
+            name: "1"
+        };
+
+        obj.v.set("1", obj1);
+        new Watcher(
+            () => obj1.name,
+            () => {
+                objChange = true;
+            }
+        );
+
+        obj1.name = "3";
+        expect(objChange).toBe(true);
+    });
+
     describe("引用劫持检监测", () => {
         let obj = observer(source, true);
         let valueChange = false;

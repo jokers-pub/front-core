@@ -1,4 +1,4 @@
-import { guid, remove, removeFilter } from "@joker.front/shared";
+import { remove, removeFilter } from "@joker.front/shared";
 import { Watcher } from "./watcher";
 
 /**
@@ -7,11 +7,6 @@ import { Watcher } from "./watcher";
  * 设置依赖时：watcher->dep
  */
 export class Dep {
-    /**
-     * 关系id，仅在production模式下生效
-     */
-    id: string = process.env.NODE_ENV === "production" ? "" : guid();
-
     /**
      * 当前目标的监听者
      *
@@ -23,13 +18,13 @@ export class Dep {
      */
     public static target?: Watcher<any>;
 
-    public watchers: Map<string | symbol, Watcher<any>[]> = new Map();
+    public watchers: Map<string | symbol | number, Watcher<any>[]> = new Map();
 
     /**
      * 设置依赖
      * @param key
      */
-    public depend(key: string | symbol) {
+    public depend(key: string | symbol | number) {
         Dep.target?.addDep(this, key);
     }
 
@@ -38,7 +33,7 @@ export class Dep {
      * @param key
      * @param watcher
      */
-    public addWatcher(key: string | symbol, watcher: Watcher<any>) {
+    public addWatcher(key: string | symbol | number, watcher: Watcher<any>) {
         let watchers = this.watchers.get(key) || [];
 
         watchers.push(watcher);
@@ -51,7 +46,7 @@ export class Dep {
      * @param key
      * @param watcher
      */
-    public removeWatcher(key: string | symbol, watcher: Watcher<any>) {
+    public removeWatcher(key: string | symbol | number, watcher: Watcher<any>) {
         let watchers = this.watchers.get(key);
 
         if (watchers) {
@@ -63,7 +58,7 @@ export class Dep {
      * 通知key下面的观察者
      * @param key
      */
-    public notify(key: string | symbol) {
+    public notify(key: string | symbol | number) {
         let watchers = this.watchers.get(key);
 
         if (watchers) {
@@ -88,7 +83,7 @@ export class Dep {
     }
 }
 
-export function notifyGroupDeps(list: Map<Dep, Array<string | symbol>>) {
+export function notifyGroupDeps(list: Map<Dep, Array<string | symbol | number>>) {
     let watchers: Watcher[] = [];
     let hasNotifyWatchers: Watcher[] = [];
 

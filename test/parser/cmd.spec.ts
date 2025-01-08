@@ -8,7 +8,11 @@ describe("parser-cmd", () => {
         model = {
             time: "0",
             ifr: 0,
-            arr: [1, 2, 3, 4, 5]
+            arr: [1, 2, 3, 4, 5],
+            arr2: [
+                { name: "1", value: [1, 2, 3, 4] },
+                { name: "2", value: [3, 4, 5, 6] }
+            ]
         };
 
         test() {
@@ -68,6 +72,28 @@ describe("parser-cmd", () => {
         data.model.ifr = 2;
         await data.$updatedRender();
         expect(root.innerHTML).toEqual("<div>3</div>");
+
+        root = await mountAst(
+            `
+                @if(!model.arr){
+                   
+                }
+                else{
+                    @if(model.arr.length){
+                        <span>1</span>
+                    }
+                }
+            `,
+            data
+        );
+
+        await data.$updatedRender();
+        expect(root.innerHTML).toEqual("<span>1</span>");
+
+        //@ts-ignore
+        data.model.arr = undefined;
+        await data.$updatedRender();
+        expect(root.innerHTML).toEqual("");
     });
 
     it("if-测试相邻if互不影响", async () => {
@@ -144,5 +170,21 @@ describe("parser-cmd", () => {
         data.model.arr.push(7);
         await data.$updatedRender();
         expect(root.innerHTML).toEqual(`<p>0</p><p>1</p><p>4</p><p>3</p><p>6</p><p>7</p>`);
+    });
+
+    it("嵌套循环", async () => {
+        let data = new Source();
+
+        let root = await mountAst(
+            ` @for(let item of model.arr2){
+            <p>@item.name</p>
+            @for(let c of item.value){
+                @(item.name+c)
+            }
+        }`,
+            data
+        );
+        await data.$updatedRender();
+        expect(root.innerHTML).toEqual(`<p>1</p>11121314<p>2</p>23242526`);
     });
 });
