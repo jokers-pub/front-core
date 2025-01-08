@@ -60,15 +60,14 @@ npm run dev
 
 After successful operation, a simple sample page will be displayed.
 
-## Low-code Visual Development
+## Visual Development Tools
 
 A front-end framework with a built-in visualization tool: [Low-code Platform](https://lowcode.jokers.pub)
 
-![Low-code Platform](readme/img4.png)
-![Low-code Platform](readme/img.jpg)
-![Low-code Platform](readme/img1.jpg)
-![Low-code Platform](readme/img3.jpg)
-![Low-code Platform](readme/img2.png)
+![Joker Low-code Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img4.png)
+![Joker Low-code Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img2.png)
+![Joker Low-code Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img1.jpg)
+![Joker Low-code Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img3.jpg)
 
 ## Documentation
 
@@ -140,15 +139,14 @@ npm run dev
 
 成功运行后，将会显示一个简单的示例页面。
 
-## 低代码可视化开发
+## 可视化开发工具
 
 一个自带可视化工具的前端框架：[低代码平台](https://lowcode.jokers.pub)
 
-![低代码平台](readme/img4.png)
-![低代码平台](readme/img.jpg)
-![低代码平台](readme/img1.jpg)
-![低代码平台](readme/img3.jpg)
-![低代码平台](readme/img2.png)
+![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img4.png)
+![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img2.png)
+![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img1.jpg)
+![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img3.jpg)
 
 ## 文档
 
