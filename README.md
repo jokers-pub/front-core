@@ -1,4 +1,4 @@
-# Joker![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)
+# Joker ![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)
 
 Joker is a framework platform designed to support all development scenarios. Among them, Joker.front is a front-end development framework under the Joker platform. It provides standardized front-end development standards and adopts an object-oriented and component-based programming model to help you develop user interfaces efficiently. Whether it's a simple or complex interface, Joker.front can handle it with ease.
 
