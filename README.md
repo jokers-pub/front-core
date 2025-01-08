@@ -1,39 +1,36 @@
-# Joker ![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore) ![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)
+# Joker![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)
 
-A Front-End Framework with a Built-in Low-Code Platform
-[Low-Code Platform](https://lowcode.jokers.pub)
-
-Joker is a framework platform designed to support all development scenarios. Among them, Joker.front is the front-end development framework under the Joker platform. It provides standardized front-end development standards and uses an object-oriented and component-based programming model to help you develop user interfaces efficiently. Whether it is a simple or complex interface, Joker.front can handle it with ease.
+Joker is a framework platform designed to support all development scenarios. Among them, Joker.front is a front-end development framework under the Joker platform. It provides standardized front-end development standards and adopts an object-oriented and component-based programming model to help you develop user interfaces efficiently. Whether it's a simple or complex interface, Joker.front can handle it with ease.
 
 ## What is Joker?
 
-Joker is a framework platform that aims to support all development scenarios. Specifically, Joker.front, which is part of the Joker platform, is a front-end development framework. It offers standardized front-end development norms and employs an object-oriented and component-based programming approach to assist in the efficient creation of user interfaces. Regardless of whether the interface is simple or intricate, Joker.front can manage it smoothly.
+Joker is a framework platform dedicated to supporting all development scenarios. Among them, Joker.front, as a part of the Joker platform, is a front-end development framework. It provides standardized front-end development specifications and uses object-oriented and component-based programming methods to assist in efficiently constructing user interfaces. No matter whether the interface is simple or complex, Joker.front can handle it smoothly.
 
-Joker is an all-round development platform constructed with TypeScript. It exhibits outstanding performance and stability, whether dealing with basic interface development requirements or complex user interface tasks. It encompasses the following significant features:
+Joker is an all-round development platform built based on TypeScript. Whether it is to meet the needs of simple interface development or handle complex user interface tasks, it shows excellent performance and stability. It has the following important features:
 
--   **Powerful Extensibility**: Joker offers a component-based framework. With extensibility in mind during its initial design, it can be effortlessly integrated into existing projects or systems and supports the construction of scalable web applications, enabling customized development according to project needs.
--   **Abundant Component Library**: Joker.front provides a comprehensive set of front-end component libraries. These include carefully designed and optimized features and UI components such as routing and scaffolding, which assist developers in rapidly constructing aesthetically pleasing and high-performance user interfaces.
--   **Comprehensive Development Tools**: To further enhance development efficiency, Joker also supplies a series of supporting development tools, including debugging and building tools. These thoughtfully designed tools are intended to streamline the development process, facilitating developers in accurately and swiftly developing, building, testing, and updating code.
--   **Class API**: Joker utilizes TypeScript as the scripting development standard and adopts the standard Class API as the development guideline, which better aligns with object-oriented development requirements.
--   **Responsiveness**: Joker automatically tracks the state of JavaScript and updates the DOM in a reactive manner when changes occur. The reactive updates are instantaneous and do not involve virtual DOM difference comparison.
+-   **Powerful Extensibility**: Joker provides a component-based framework. Its extensibility has been taken into account from the very beginning of the design, so it can be easily integrated into existing projects or systems, supports the construction of scalable web applications, and can be customized according to project requirements.
+-   **Rich Component Library**: Joker.front provides a complete set of front-end component libraries, including carefully designed and optimized functional and UI components such as routing and scaffolding, which can help developers quickly build beautiful and high-performance user interfaces.
+-   **Complete Development Tools**: To further improve development efficiency, Joker also provides a series of supporting development tools, including debugging tools, building tools, etc. These carefully designed tools are aimed at making the development process smoother and helping developers develop, build, test and update code accurately and quickly.
+-   **Class API**: Joker uses TypeScript as the script development standard and adopts the standard Class API as the development specification, which is more in line with the requirements of object-oriented development.
+-   **Responsiveness**: Joker will automatically track the state of JavaScript. When it changes, it can update the DOM in a responsive manner immediately, and there is no difference comparison of the virtual DOM.
 
 ## How to Use
 
-You can utilize the Joker CLI to create projects, generate application and library code, and carry out various continuous development tasks such as testing, packaging, and deployment.
+You can use the Joker CLI to create projects, generate application and library code, and perform various continuous development tasks, such as testing, packaging, and deployment.
 
-To install the Joker CLI, open a terminal/console window and execute the following command:
+To install the Joker CLI, please open the terminal/console window and run the following command:
 
 ```
 pnpm i -g @joker.front/cli
 ```
 
-1. Run the CLI command **joker create** and supply the name my-app as a parameter, as shown below:
+1. Run the CLI command **joker create** and provide the name my-app as a parameter, as shown below:
 
 ```
 joker create my-app
 ```
 
-2. In the my-app working directory, install the dependencies.
+2. Install the dependencies in the working directory of my-app.
 
 ```
 cd my-app
@@ -41,13 +38,13 @@ cd my-app
 pnpm i
 ```
 
-The CLI will create a new workspace and a simple welcome application that you can run at any time.
+The CLI will create a new workspace and a simple welcome application, which you can run at any time.
 
 ## Running the Application
 
-The Joker CLI includes a server command and a build command. The server command enables you to build and serve applications locally.
+The Joker CLI includes a server command and a build command. The server command makes it convenient for you to build and provide application services locally.
 
-We provide two commands by default, namely `dev` and `build`, representing the development environment and code building respectively.
+We provide two commands by default, namely `dev` and `build`, which represent the development environment and code building respectively.
 
 1. Navigate to the workspace folder, such as my-app.
 
@@ -61,15 +58,17 @@ cd my-app
 npm run dev
 ```
 
-Upon successful execution, a simple sample page will be displayed.
+After successful operation, a simple sample page will be displayed.
 
-## Low-Code Visual Development
+## Low-code Visual Development
 
-![Low-Code Platform](readme/img4.png)
-![Low-Code Platform](readme/img.jpg)
-![Low-Code Platform](readme/img1.jpg)
-![Low-Code Platform](readme/img3.jpg)
-![Low-Code Platform](readme/img2.png)
+A front-end framework with a built-in visualization tool: [Low-code Platform](https://lowcode.jokers.pub)
+
+![Low-code Platform](readme/img4.png)
+![Low-code Platform](readme/img.jpg)
+![Low-code Platform](readme/img1.jpg)
+![Low-code Platform](readme/img3.jpg)
+![Low-code Platform](readme/img2.png)
 
 ## Documentation
 
@@ -77,12 +76,9 @@ Upon successful execution, a simple sample page will be displayed.
 
 [Official UI Library](https://ui.jokers.pub)
 
-[Low-Code Platform](https://jokers.pub)
+[Low-code Platform](https://jokers.pub)
 
 # Joker
-
-一个自带低代码平台的前端框架
-[低代码平台](https://lowcode.jokers.pub)
 
 Joker 是一个旨在为所有开发场景提供支持的框架平台。其中，Joker.front 是 Joker 平台下的前端开发框架，它提供标准化的前端开发标准，采用面向对象、组件化的编程模型，助力您高效开发用户界面。无论是简单还是复杂的界面，Joker.front 都能轻松应对。
 
@@ -145,6 +141,8 @@ npm run dev
 成功运行后，将会显示一个简单的示例页面。
 
 ## 低代码可视化开发
+
+一个自带可视化工具的前端框架：[低代码平台](https://lowcode.jokers.pub)
 
 ![低代码平台](readme/img4.png)
 ![低代码平台](readme/img.jpg)
