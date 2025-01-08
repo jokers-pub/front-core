@@ -29,13 +29,14 @@
     "author": "Zohar",
     "license": "MIT",
     "repository": {
-        "type": "git"
+        "type": "git",
+        "url": "git+https://github.com/jokers-pub/front-core.git"
     },
+    "homepage": "https://front.jokers.pub",
     "keywords": [
         "joker",
         "front"
     ],
-    "homepage": "jokers.pub",
     "dependencies": {
         "@joker.front/ast": "^1.3.24"
     },
