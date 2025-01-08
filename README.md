@@ -18,6 +18,8 @@ Joker is an all-round development platform built based on TypeScript. Whether it
 
 You can use the Joker CLI to create projects, generate application and library code, and perform various continuous development tasks, such as testing, packaging, and deployment.
 
+[Help Documentation](https://front.jokers.pub)
+
 To install the Joker CLI, please open the terminal/console window and run the following command:
 
 ```
@@ -96,6 +98,8 @@ Joker 是一个基于 TypeScript 构建的全能开发平台。无论是应对�
 ## 如何使用
 
 您可以使用 Joker CLI 来创建项目、生成应用和库代码，以及执行各类持续开发任务，如测试、打包和部署。
+
+[帮助文档](https://front.jokers.pub)
 
 要安装 Joker CLI，请打开终端/控制台窗口，并运行如下命令：
 
