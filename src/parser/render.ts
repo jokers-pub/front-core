@@ -44,7 +44,7 @@ export namespace Render {
          * @param root 挂载根
          * 不限制root类型，为后面做多端兼容
          */
-        mount(root: any, onMunted?: Function): void;
+        mount(root: any): void;
 
         /**
          * 添加节点
@@ -98,11 +98,9 @@ export namespace Render {
             this.elements = document.createDocumentFragment();
         }
 
-        mount(root: Element | VNode.Component, onMunted?: Function): void {
+        mount(root: Element | VNode.Component): void {
             if (root instanceof Element) {
                 root.appendChild(this.elements);
-
-                onMunted?.();
             } else if (root instanceof VNode.Component) {
                 if (root.parent) {
                     if (root.output) {
@@ -112,9 +110,6 @@ export namespace Render {
                         //不会出现没有parentEl的场景
                         if (parentEl) {
                             parentEl.insertBefore(this.elements, nodeEl);
-                            if (document.contains(parentEl)) {
-                                onMunted?.();
-                            }
                         }
                     } else {
                         logger.error(LOGTAG, "组件挂载渲染时发现该节点未定义DOM定位节点", root);
