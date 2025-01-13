@@ -674,7 +674,7 @@ export class ComponentContainer extends Component<{
 
     private cache: Map<string, IComponent> = new Map();
 
-    mounted() {
+    async mounted() {
         this.$watch(
             () => this.props.name,
             async (componentName) => {
@@ -689,7 +689,7 @@ export class ComponentContainer extends Component<{
             }
         );
 
-        this.loadComponent(this.props.name);
+        await this.loadComponent(this.props.name);
     }
     private propsVaule: any;
 
@@ -806,6 +806,9 @@ export class Template extends Component {
     template = function () {
         return [createCommand("RenderSection")];
     };
+    async mounted() {
+        await this.$nextUpdatedRender();
+    }
 }
 
 registerGlobalComponent({
