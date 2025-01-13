@@ -2,7 +2,7 @@ import { Component, VNode } from "../../src";
 import { getAst } from "../utils";
 
 describe("组件事件", () => {
-    it("基础", () => {
+    it("基础", async () => {
         let tempVal = "";
         let mounted = false;
         let destroy = false;
@@ -32,6 +32,7 @@ describe("组件事件", () => {
         });
 
         component.$mount(root);
+        await Promise.resolve();
         expect(mounted).toEqual(true);
 
         component.test("22");

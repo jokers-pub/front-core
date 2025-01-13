@@ -214,12 +214,12 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         let createdPromise = this.created();
 
-        let next = () => {
+        let next = async () => {
             this.$trigger("created");
 
             //有模板则执行render，否则不处理
             this.template && this.$render();
-
+            await Promise.resolve();
             this.mounted();
             this.$trigger("mounted");
         };
