@@ -45,14 +45,14 @@ export class ParserComponent extends IParser<
 
         this.loadPromise = this.renderChildren();
 
-        this.ext.promiseQueue.add(
-            this.loadPromise.finally(() => {
-                if (this.loadPromise) {
-                    this.ext.promiseQueue.delete(this.loadPromise);
-                    this.loadPromise = undefined;
-                }
-            })
-        );
+        this.ext.promiseQueue.add(this.loadPromise);
+
+        this.loadPromise.finally(() => {
+            if (this.loadPromise) {
+                this.ext.promiseQueue.delete(this.loadPromise);
+                this.loadPromise = undefined;
+            }
+        });
     }
 
     /**
