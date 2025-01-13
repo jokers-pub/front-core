@@ -243,32 +243,22 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
     public $nextUpdatedRender(callBack?: Function) {
         if (this[IS_DESTROY]) return;
-        return new Promise((resolve) => {
-            let checkPromise = () => {
-                //收集此刻异步渲染（含子集）
-                let promiseQueue: Array<Promise<any>> = [...(this[PARSER_TEMPLATE_TARGET]?.promiseQueue || [])];
-                let childrens: any = this.$rootVNode?.find((n) => n instanceof VNode.Component);
-                childrens?.forEach((n: any) => {
-                    n?.component && promiseQueue.push(...(n.component[PARSER_TEMPLATE_TARGET]?.promiseQueue || []));
-                });
-                if (promiseQueue.length) {
-                    Promise.all(promiseQueue).finally(() => {
-                        if (this[IS_DESTROY]) return;
-                        callBack?.();
-                        resolve(undefined);
-                    });
-                } else {
-                    if (this[IS_DESTROY]) return;
-                    callBack?.();
-                    resolve(undefined);
-                }
-            };
 
-            //等待异步，收集
-            setTimeout(() => {
-                checkPromise();
-            });
+        //收集此刻异步渲染（含子集）
+        let promiseQueue: Array<Promise<any>> = [...(this[PARSER_TEMPLATE_TARGET]?.promiseQueue || [])];
+        let childrens: any = this.$rootVNode?.find((n) => n instanceof VNode.Component);
+        childrens?.forEach((n: any) => {
+            n?.component && promiseQueue.push(...(n.component[PARSER_TEMPLATE_TARGET]?.promiseQueue || []));
         });
+        if (promiseQueue.length) {
+            return Promise.all(promiseQueue).finally(() => {
+                if (this[IS_DESTROY]) return;
+                callBack?.();
+            });
+        } else {
+            if (this[IS_DESTROY]) return;
+            callBack?.();
+        }
     }
 
     /**
