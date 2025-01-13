@@ -20,15 +20,11 @@
     ],
     "scripts": {
         "test": "jest",
-        "test:temp": "jest test/other/component.spec.ts",
+        "test:temp": "jest test/other/event.spec.ts",
         "build": "joker_build_library --sourcemap=false",
         "build:prod": "joker_build_library --sourcemap=false --terser",
         "release": "npm run test && npm run build && joker_release_library",
         "release:prod": "npm run test && npm run build:prod && npm publish --access public --registry https://registry.npmjs.org/"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/jokers-pub/front-core.git"
     },
     "author": "Zohar",
     "license": "MIT",

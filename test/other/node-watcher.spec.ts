@@ -28,9 +28,9 @@ describe("keepalive", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual(`<span class="a"></span>`);
-
+        await component.$nextUpdatedRender();
         component.setValue("b");
         expect(root.innerHTML).toEqual(`<span class="b"></span>`);
         expect(component.updateCount).toEqual(1);

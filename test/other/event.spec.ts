@@ -1,3 +1,4 @@
+import { sleep } from "@joker.front/shared";
 import { Component, VNode } from "../../src";
 import { getAst } from "../utils";
 
@@ -32,7 +33,7 @@ describe("组件事件", () => {
         });
 
         component.$mount(root);
-        await Promise.resolve();
+        await sleep(10);
         expect(mounted).toEqual(true);
 
         component.test("22");
