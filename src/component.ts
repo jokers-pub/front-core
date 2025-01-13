@@ -212,15 +212,25 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         this.model = observer(this.model);
 
-        this.created();
+        let createdPromise = this.created();
 
-        this.$trigger("created");
+        let next = () => {
+            this.$trigger("created");
 
-        //有模板则执行render，否则不处理
-        this.template && this.$render();
+            //有模板则执行render，否则不处理
+            this.template && this.$render();
 
-        this.mounted();
-        this.$trigger("mounted");
+            this.mounted();
+            this.$trigger("mounted");
+        };
+        if (createdPromise && createdPromise instanceof Promise) {
+            createdPromise.then(() => {
+                if (this[IS_DESTROY]) return;
+                next();
+            });
+        } else {
+            next();
+        }
 
         return this;
     }
