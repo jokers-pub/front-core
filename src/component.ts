@@ -383,16 +383,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             logger.warn(LOGTAG, `该组件还未挂载，不可以进行节点观察监听`);
         }
     }
-    /**
-     * 等待下次渲染更新
-     * @param callBack
-     * @returns
-     */
-    public async $updatedRender(callBack?: Function) {
-        if (this[IS_DESTROY]) return;
-        await Promise.resolve();
-        callBack?.();
-    }
+
     /**
      * 观察值变更
      * @param express
