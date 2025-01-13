@@ -1,6 +1,6 @@
 {
     "name": "@joker.front/core",
-    "version": "1.3.57",
+    "version": "1.3.58",
     "description": "",
     "main": "./dist/bundle.js",
     "module": "./dist/bundle.es.js",
@@ -18,10 +18,6 @@
         "types/*",
         "README.md"
     ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/jokers-pub/front-core.git"
-    },
     "scripts": {
         "test": "jest",
         "test:temp": "jest test/other/for-update.spec.ts",
