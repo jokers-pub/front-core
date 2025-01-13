@@ -244,8 +244,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     public $nextUpdatedRender(callBack?: Function) {
         if (this[IS_DESTROY]) return;
         return new Promise((resolve) => {
-            let checkPromise = async () => {
-                await Promise.resolve();
+            let checkPromise = () => {
                 //收集此刻异步渲染（含子集）
                 let promiseQueue: Array<Promise<any>> = [...(this[PARSER_TEMPLATE_TARGET]?.promiseQueue || [])];
                 let childrens: any = this.$rootVNode?.find((n) => n instanceof VNode.Component);
