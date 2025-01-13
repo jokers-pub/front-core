@@ -2,8 +2,6 @@ import { AST, createFuntionBody } from "@joker.front/ast";
 import { isEmptyStr, logger } from "@joker.front/shared";
 import { GLOBAL_TAG, IParser } from "../parser";
 import { VNode } from "../vnode";
-import { debug } from "console";
-import { resolveDeepPromisesInPlace } from "../../utils";
 
 export class ParserCode extends IParser<AST.PropertyOrFunctionCommand, VNode.Text | VNode.Html> {
     public parser(): void {
@@ -24,42 +22,15 @@ export class ParserCode extends IParser<AST.PropertyOrFunctionCommand, VNode.Tex
 
         if (express) {
             let data = this.runExpressWithWatcher(`[${express}]`, this.ob, (newVal) => {
-                let transformPromiseValue = resolveDeepPromisesInPlace(newVal[0]);
-                if (transformPromiseValue instanceof Promise) {
-                    transformPromiseValue
-                        .then((nv) => {
-                            this.changeValue(nv);
-                        })
-                        .catch((e) => {
-                            logger.error("表达式编译", `${express}异步处理失败`, e);
-                        });
-                } else {
-                    this.changeValue(transformPromiseValue);
-                }
+                this.changeValue(newVal?.[0]);
             });
 
             data ||= [];
-            let transformPromiseValue = resolveDeepPromisesInPlace(data[0]);
-            if (transformPromiseValue instanceof Promise) {
-                if (this.ast.cmdName === "Html") {
-                    this.node = new VNode.Html("", this.parent, data[1]);
-                } else {
-                    this.node = new VNode.Text("", this.parent);
-                }
 
-                transformPromiseValue
-                    .then((nv) => {
-                        this.changeValue(nv);
-                    })
-                    .catch((e) => {
-                        logger.error("表达式编译", `${express}异步处理失败`, e);
-                    });
+            if (this.ast.cmdName === "Html") {
+                this.node = new VNode.Html(transformText(data[0]), this.parent, data[1]);
             } else {
-                if (this.ast.cmdName === "Html") {
-                    this.node = new VNode.Html(transformText(transformPromiseValue), this.parent, data[1]);
-                } else {
-                    this.node = new VNode.Text(transformText(transformPromiseValue), this.parent);
-                }
+                this.node = new VNode.Text(transformText(data[0]), this.parent);
             }
 
             this.appendNode();

@@ -19,18 +19,18 @@ describe("parser-cmd", () => {
             return this.model.time + "1";
         }
     }
-    it("基础Html", async () => {
+    it("基础Html", () => {
         let data = new Source();
 
-        let root = await mountAst(`<div>@model.time @Html(model.time)</div>`, data);
+        let root = mountAst(`<div>@model.time @Html(model.time)</div>`, data);
 
         expect(root.innerHTML).toEqual('<div>0<joker-html-shadow style="line-height: 1;"></joker-html-shadow></div>');
 
-        root = await mountAst(`<div>@Html(test())</div>`, data);
+        root = mountAst(`<div>@Html(test())</div>`, data);
 
         expect(root.innerHTML).toEqual('<div><joker-html-shadow style="line-height: 1;"></joker-html-shadow></div>');
 
-        root = await mountAst(`<div>@test()</div>`, data);
+        root = mountAst(`<div>@test()</div>`, data);
 
         expect(root.innerHTML).toEqual("<div>01</div>");
 
@@ -40,15 +40,15 @@ describe("parser-cmd", () => {
             }
         });
 
-        root = await mountAst(`<div>@Global.test('3',model.time)</div>`, data);
+        root = mountAst(`<div>@Global.test('3',model.time)</div>`, data);
 
         expect(root.innerHTML).toEqual("<div>30</div>");
     });
 
-    it("if", async () => {
+    it("if", () => {
         let data = new Source();
 
-        let root = await mountAst(
+        let root = mountAst(
             `
                 @if(model.ifr===0){
                     <div>1</div>
@@ -66,14 +66,12 @@ describe("parser-cmd", () => {
         expect(root.innerHTML).toEqual("<div>1</div>");
 
         data.model.ifr = 1;
-        await data.$updatedRender();
         expect(root.innerHTML).toEqual("<div>2</div>");
 
         data.model.ifr = 2;
-        await data.$updatedRender();
         expect(root.innerHTML).toEqual("<div>3</div>");
 
-        root = await mountAst(
+        root = mountAst(
             `
                 @if(!model.arr){
                    
@@ -87,18 +85,16 @@ describe("parser-cmd", () => {
             data
         );
 
-        await data.$updatedRender();
         expect(root.innerHTML).toEqual("<span>1</span>");
 
         //@ts-ignore
         data.model.arr = undefined;
-        await data.$updatedRender();
         expect(root.innerHTML).toEqual("");
     });
 
-    it("if-测试相邻if互不影响", async () => {
+    it("if-测试相邻if互不影响", () => {
         let data1 = new Source();
-        let root1 = await mountAst(
+        let root1 = mountAst(
             `
                 @if(true){
                     <div>-1</div>
@@ -122,60 +118,60 @@ describe("parser-cmd", () => {
         expect(root1.innerHTML).toEqual("<div>-1</div><div>1</div>");
 
         data1.model.ifr = 1;
-        await data1.$updatedRender();
+
         expect(root1.innerHTML).toEqual("<div>-1</div><div>2</div>");
 
         data1.model.ifr = 2;
-        await data1.$updatedRender();
+
         expect(root1.innerHTML).toEqual("<div>-1</div><div>3</div>");
     });
 
     it("for", async () => {
         let data = new Source();
 
-        let root = await mountAst(
+        let root = mountAst(
             ` @for(let item of model.arr){
             <p>@item</p>
         }`,
             data
         );
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>1</p><p>2</p><p>3</p><p>4</p><p>5</p>`);
 
         data.model.arr.push(6);
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>1</p><p>2</p><p>3</p><p>4</p><p>5</p><p>6</p>`);
 
         data.model.arr.pop();
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>1</p><p>2</p><p>3</p><p>4</p><p>5</p>`);
 
         data.model.arr = [6, 5, 4, 3];
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>6</p><p>5</p><p>4</p><p>3</p>`);
 
         data.model.arr.splice(1, 0, 1);
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>6</p><p>1</p><p>5</p><p>4</p><p>3</p>`);
 
         data.model.arr[0] = 0;
-        await data.$updatedRender();
+        await Promise.resolve();
         expect(root.innerHTML).toEqual(`<p>0</p><p>1</p><p>5</p><p>4</p><p>3</p>`);
 
         remove(data.model.arr, 5);
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>0</p><p>1</p><p>4</p><p>3</p>`);
 
         data.model.arr.push(6);
         data.model.arr.push(7);
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>0</p><p>1</p><p>4</p><p>3</p><p>6</p><p>7</p>`);
     });
 
-    it("嵌套循环", async () => {
+    it("嵌套循环", () => {
         let data = new Source();
 
-        let root = await mountAst(
+        let root = mountAst(
             ` @for(let item of model.arr2){
             <p>@item.name</p>
             @for(let c of item.value){
@@ -184,7 +180,7 @@ describe("parser-cmd", () => {
         }`,
             data
         );
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<p>1</p>11121314<p>2</p>23242526`);
     });
 });

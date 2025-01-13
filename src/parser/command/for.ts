@@ -1,6 +1,6 @@
 import { AST, EXPRESSHANDLERTAG } from "@joker.front/ast";
-import { isPlainObject, foEachProperties, guid } from "@joker.front/shared";
-import { defineObserverProperty, isObserverData } from "../../observer";
+import { isPlainObject, foEachProperties } from "@joker.front/shared";
+import { defineObserverProperty } from "../../observer";
 import { ObType } from "../index";
 import { IParser } from "../parser";
 import { VNode } from "../vnode";
@@ -19,28 +19,25 @@ function createExpress(letKey: string, keyVal: string, condition: string): Funct
 }
 
 export class ParserList extends IParser<AST.ForCommand, VNode.List> {
-    public async parser() {
+    public parser() {
         this.node = new VNode.List(this.parent);
-
         this.appendNode();
-
-        await this.renderChildrens();
+        this.renderChildrens();
     }
 
-    private async renderChildrens() {
-        this.renderId = guid();
+    private renderChildrens() {
         switch (this.ast.keyType) {
             case "condition":
-                await this.renderConditionChildrens();
+                this.renderConditionChildrens();
                 break;
             case "in":
             case "of":
-                await this.renderInOrOfChildrens();
+                this.renderInOrOfChildrens();
                 break;
         }
     }
 
-    private async renderConditionChildrens() {
+    private renderConditionChildrens() {
         let param = this.ast.param as AST.ConditionParam;
 
         let forOb = Object.create(this.ob);
@@ -65,69 +62,47 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
             true
         );
 
-        let execRender = async (renderId?: string) => {
-            let index = 0;
-            let renderPrimaryArr: Array<Promise<any>> = [];
-            while (breakVal) {
-                //每次都要创新新的对象，因为对象是引用类型，不可以公用一个对象传递
-                //如果挂载的新属性都是作为渲染，则可以用同一个属性传递
-                //但是我们的属性可能会存在于一些延时触发的事件中
-                let stepOb = Object.create(this.ob);
+        let index = 0;
 
-                //设置数据劫持属性
-                defineObserverProperty(stepOb, param.letKey, forOb[param.letKey]);
+        while (breakVal) {
+            //每次都要创新新的对象，因为对象是引用类型，不可以公用一个对象传递
+            //如果挂载的新属性都是作为渲染，则可以用同一个属性传递
+            //但是我们的属性可能会存在于一些延时触发的事件中
+            let stepOb = Object.create(this.ob);
 
-                let currentIndex = index++;
+            //设置数据劫持属性
+            defineObserverProperty(stepOb, param.letKey, forOb[param.letKey]);
 
-                let result = this.renderItem(stepOb, currentIndex);
+            let currentIndex = index++;
 
-                let nextExec = () => {
-                    if (this.renderId !== renderId) return;
-                    this.runExpressWithWatcher(
-                        () => forOb[param.letKey],
-                        forOb,
-                        (newVal, _, isEqual, watcher) => {
-                            //通过异步等待，防止数组变更后带来的整个列表重新计算
-                            Promise.resolve().then(() => {
-                                if (watcher.isDestroy) return;
-                                stepOb[param.letKey!] = newVal;
-                                if (!isEqual) {
-                                    this.updateListItemOb(stepOb, currentIndex);
-                                }
-                            });
-                        },
-                        true
-                    );
-                };
-                if (result instanceof Promise) {
-                    renderPrimaryArr.push(result.then(() => nextExec()));
-                } else {
-                    nextExec();
-                }
+            this.renderItem(stepOb, currentIndex);
 
-                //执行下一次循环设值
-                this.runExpress(param.step, forOb);
-                //读取下一次的判断条件
-                breakVal = !!this.runExpress(param.condition, forOb);
-            }
+            this.runExpressWithWatcher(
+                () => forOb[param.letKey],
+                forOb,
+                async (newVal, _, isEqual, watcher) => {
+                    //做一次等待，防止后续长度变更带来的二次更新
+                    await Promise.resolve();
+                    if (watcher.isDestroy) return;
 
-            if (renderPrimaryArr.length) {
-                await Promise.all(renderPrimaryArr).then(() => {
-                    if (this.renderId !== renderId) return;
-                    this.destroyOldChildrens(index);
-                });
-            } else {
-                if (this.renderId !== renderId) return;
-                this.destroyOldChildrens(index);
-            }
-        };
+                    stepOb[param.letKey!] = newVal;
+                    if (!isEqual) {
+                        this.updateListItemOb(stepOb, currentIndex);
+                    }
+                },
+                true
+            );
 
-        await execRender(this.renderId);
+            //执行下一次循环设值
+            this.runExpress(param.step, forOb);
+            //读取下一次的判断条件
+            breakVal = !!this.runExpress(param.condition, forOb);
+        }
+
+        this.destroyOldChildrens(index);
     }
 
-    renderId?: string;
-
-    private async renderInOrOfChildrens() {
+    private renderInOrOfChildrens() {
         let param = this.ast.param as AST.InOrOfParam;
 
         let listOb = this.runExpressWithWatcher(param.dataKey, this.ob, () => {
@@ -136,67 +111,47 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
             this.renderChildrens();
         });
 
-        let execRender = async (renderId?: string) => {
-            let index = 0;
-            let renderPrimaryArr: Array<Promise<any>> = [];
-            if (listOb && (Array.isArray(listOb) || isPlainObject(listOb))) {
-                for (let key in listOb) {
-                    let stepOb = Object.create(this.ob);
-                    let keyVal = Array.isArray(listOb) ? Number(key) : key;
-                    //对于数组时，index为索引，对于对象index为key（统称索引Key）
-                    if (param.indexKey) {
-                        defineObserverProperty(stepOb, param.indexKey, keyVal);
-                    }
+        let index = 0;
 
-                    if (param.itemKey) {
-                        defineObserverProperty(stepOb, param.itemKey, listOb[key]);
-                    }
-                    let currentIndex = index++;
+        if (listOb && (Array.isArray(listOb) || isPlainObject(listOb))) {
+            for (let key in listOb) {
+                let stepOb = Object.create(this.ob);
+                let keyVal = Array.isArray(listOb) ? Number(key) : key;
+                //对于数组时，index为索引，对于对象index为key（统称索引Key）
+                if (param.indexKey) {
+                    defineObserverProperty(stepOb, param.indexKey, keyVal);
+                }
 
-                    let nextExec = () => {
-                        if (this.renderId !== renderId) return;
-                        if (param.itemKey) {
-                            this.runExpressWithWatcher(
-                                //@ts-ignore
-                                () => listOb[keyVal],
-                                listOb,
-                                (newVal, _, isEqual, watcher) => {
-                                    if (keyVal in listOb) {
-                                        //通过异步等待，防止数组变更后带来的整个列表重新计算
-                                        Promise.resolve().then(() => {
-                                            if (watcher.isDestroy) return;
-                                            stepOb[param.itemKey!] = newVal;
-                                            if (!isEqual) {
-                                                this.updateListItemOb(stepOb, currentIndex);
-                                            }
-                                        });
-                                    }
-                                },
-                                true
-                            );
-                        }
-                    };
-                    let result = this.renderItem(stepOb, currentIndex, param.indexKey);
+                if (param.itemKey) {
+                    defineObserverProperty(stepOb, param.itemKey, listOb[key]);
+                }
+                let currentIndex = index++;
 
-                    if (result instanceof Promise) {
-                        renderPrimaryArr.push(result.then(() => nextExec()));
-                    } else {
-                        nextExec();
-                    }
+                this.renderItem(stepOb, currentIndex, param.indexKey);
+
+                if (param.itemKey) {
+                    this.runExpressWithWatcher(
+                        //@ts-ignore
+                        () => listOb[keyVal],
+                        listOb,
+                        async (newVal, _, isEqual, watcher) => {
+                            //做一次等待，防止后续长度变更带来的二次更新
+                            await Promise.resolve();
+                            if (watcher.isDestroy) return;
+
+                            if (keyVal in listOb) {
+                                stepOb[param.itemKey!] = newVal;
+                                if (!isEqual) {
+                                    this.updateListItemOb(stepOb, currentIndex);
+                                }
+                            }
+                        },
+                        true
+                    );
                 }
             }
-            if (renderPrimaryArr.length) {
-                await Promise.all(renderPrimaryArr).then(() => {
-                    if (this.renderId !== renderId) return;
-                    this.destroyOldChildrens(index);
-                });
-            } else {
-                if (this.renderId !== renderId) return;
-                this.destroyOldChildrens(index);
-            }
-        };
-
-        await execRender(this.renderId);
+        }
+        this.destroyOldChildrens(index);
     }
 
     findIndexByIndex(ob: ObType, startIndex: number, indexKey?: string) {
@@ -305,11 +260,11 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
 }
 
 export class ParserListeItem extends IParser<AST.ForCommand, VNode.ListItem> {
-    public async parser(index?: number) {
+    public parser(index?: number) {
         this.node = new VNode.ListItem(this.ob, this.parent);
 
         this.appendNode(index);
 
-        this.ast.childrens && (await this.ext.parserNodes(this.ast.childrens, this.node, this.ob));
+        this.ast.childrens && this.ext.parserNodes(this.ast.childrens, this.node, this.ob);
     }
 }

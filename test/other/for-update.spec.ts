@@ -20,11 +20,11 @@ describe("FOR循环更新测试", () => {
         let root = document.createElement("div");
         let component = new View();
 
-        await component.$mount(root);
+        component.$mount(root);
         expect(root.innerHTML).toEqual("<span>1</span><span>2</span><span>3</span>");
 
         moveUp(component.model.list, 1);
-        await component.$updatedRender();
+        await Promise.resolve();
         expect(root.innerHTML).toEqual("<span>2</span><span>1</span><span>3</span>");
 
         component.model.list.push({ id: 5 });
@@ -40,7 +40,8 @@ describe("FOR循环更新测试", () => {
         expect(root.innerHTML).toEqual("<span>2</span><span>1</span><span>3</span><span>x</span>");
 
         moveUp(component.model.list, 2);
-        await component.$updatedRender();
+
+        await Promise.resolve();
         expect(root.innerHTML).toEqual("<span>2</span><span>3</span><span>1</span><span>x</span>");
         combinedReply(() => {
             removeFilter(component.model.list, (n) => n.id === 1);
@@ -50,7 +51,6 @@ describe("FOR循环更新测试", () => {
         expect(root.innerHTML).toEqual("<span>2</span><span>x</span>");
 
         component.model.list.unshift({ id: 0 });
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span>0</span><span>2</span><span>x</span>");
 
         component.model.list.splice(2, 0, { id: 3 });
@@ -62,20 +62,20 @@ describe("FOR循环更新测试", () => {
         expect(root.innerHTML).toEqual("<span>0</span><span>2</span><span>3</span>");
 
         component.model.list[0] = { id: 333 };
-        await component.$updatedRender();
+        await Promise.resolve();
         expect(root.innerHTML).toEqual("<span>333</span><span>2</span><span>3</span>");
         component.model.list.push({ id: 4 });
 
         moveDown(component.model.list, 0);
-        await component.$updatedRender();
+        await Promise.resolve();
         expect(root.innerHTML).toEqual("<span>2</span><span>333</span><span>3</span><span>4</span>");
 
         moveDown(component.model.list, 0);
-        await component.$updatedRender();
+        await Promise.resolve();
         expect(root.innerHTML).toEqual("<span>333</span><span>2</span><span>3</span><span>4</span>");
     });
 
-    it("带索引", async () => {
+    it("带索引", () => {
         class View extends Component {
             model = {
                 list: [{ id: 1 }, { id: 2 }, { id: 3 }]
@@ -91,13 +91,12 @@ describe("FOR循环更新测试", () => {
 
         let root = document.createElement("div");
         let component = new View();
-        await component.$mount(root);
+        component.$mount(root);
 
         root.lastElementChild!.innerHTML = "x";
         expect(root.innerHTML).toEqual("<span>1</span><span>2</span><span>x</span>");
 
         component.model.list.shift();
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span>2</span><span>x</span>");
     });
 });

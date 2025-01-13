@@ -42,17 +42,15 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
     ) {}
 
     init(index?: number) {
-        let promise = this.parser(index);
+        this.parser(index);
 
         this.afterParser();
-
-        if (promise) return promise;
     }
 
     /**
      * 上游主入口方法（初始化执行）
      */
-    public abstract parser(index?: number): void | Promise<void>;
+    public abstract parser(index?: number): void;
 
     protected beforeDestroy(keepalive?: boolean): void | boolean {}
 

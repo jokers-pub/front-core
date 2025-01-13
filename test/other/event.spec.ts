@@ -2,7 +2,7 @@ import { Component, VNode } from "../../src";
 import { getAst } from "../utils";
 
 describe("组件事件", () => {
-    it("基础", async () => {
+    it("基础", () => {
         let tempVal = "";
         let mounted = false;
         let destroy = false;
@@ -31,11 +31,10 @@ describe("组件事件", () => {
             destroy = true;
         });
 
-        await component.$mount(root);
+        component.$mount(root);
         expect(mounted).toEqual(true);
 
         component.test("22");
-        await component.$updatedRender();
         expect(tempVal).toEqual("22");
 
         component.$destroy(true);
@@ -43,7 +42,6 @@ describe("组件事件", () => {
 
         //验证事件不再广播
         component.test("33");
-        await component.$updatedRender();
         expect(tempVal).toEqual("22");
     });
 });

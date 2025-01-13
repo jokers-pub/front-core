@@ -6,29 +6,29 @@ class SourceView extends Component {
     };
 }
 describe("html", () => {
-    test("parser-html-sandbox", async () => {
+    test("parser-html-sandbox", () => {
         let view = new SourceView();
 
-        let root = await mountAst(`@Html(model.content)`, view);
+        let root = mountAst(`@Html(model.content)`, view);
 
         //开启沙箱 无法判断内部文本
         expect(root.innerHTML).toBe('<joker-html-shadow style="line-height: 1;"></joker-html-shadow>');
 
         view.model.content = "<div>1</div>";
-        await view.$updatedRender();
+
         expect(root.innerHTML).toBe('<joker-html-shadow style="line-height: 1;"></joker-html-shadow>');
     });
 
-    test("parser-html", async () => {
+    test("parser-html", () => {
         let view = new SourceView();
 
-        let root = await mountAst(`@Html(model.content,true)`, view);
+        let root = mountAst(`@Html(model.content,true)`, view);
 
         //开启沙箱 无法判断内部文本
         expect(root.innerHTML).toBe("<joker-html-container>哈哈哈哈哈哈<i></i></joker-html-container>");
 
         view.model.content = "<div>1</div>";
-        await view.$updatedRender();
+
         expect(root.innerHTML).toBe("<joker-html-container><div>1</div></joker-html-container>");
     });
 });

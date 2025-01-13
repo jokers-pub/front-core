@@ -2,27 +2,23 @@ import { AST } from "@joker.front/ast";
 import { isEmptyStr, logger } from "@joker.front/shared";
 import { IParser } from "./parser";
 import { VNode } from "./vnode";
-import { resolveDeepPromisesInPlace } from "../utils";
 
 const LOGTAG = "Element解析";
 
 export class ParserElement extends IParser<AST.Element, VNode.Element> {
-    public async parser() {
+    public parser() {
         this.node = new VNode.Element(this.ast.tagName, this.parent);
 
-        let promiseQueue = this.initAttributes();
+        this.initAttributes();
 
         this.initEvents();
 
         this.appendNode();
-        if (promiseQueue.length) {
-            await Promise.all(promiseQueue);
-        }
-        await this.ext.parserNodes(this.ast.childrens, this.node, this.ob);
+
+        this.ext.parserNodes(this.ast.childrens, this.node, this.ob);
     }
 
     private initAttributes() {
-        let promiseQueue = [];
         for (let attr of this.ast.attributes) {
             if (attr.name === "ref") {
                 if (isEmptyStr(attr.value)) {
@@ -48,38 +44,14 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                 };
 
                 let watcherVal = this.runExpressWithWatcher(attr.express, this.ob, (newVal) => {
-                    let transformPromiseValue = resolveDeepPromisesInPlace(newVal);
-                    if (transformPromiseValue instanceof Promise) {
-                        transformPromiseValue
-                            .then((pv) => {
-                                change(pv);
-                            })
-                            .catch((e) => {
-                                logger.error(LOGTAG, `${attr.express}异步处理失败`, e);
-                            });
-                    } else {
-                        change(transformPromiseValue);
-                    }
+                    change(newVal);
                 });
-                let transformPromiseValue = resolveDeepPromisesInPlace(watcherVal);
-                if (transformPromiseValue instanceof Promise) {
-                    transformPromiseValue
-                        .then((pv) => {
-                            change(pv);
-                        })
-                        .catch((e) => {
-                            logger.error(LOGTAG, `${attr.express}异步处理失败`, e);
-                        });
-                    promiseQueue.push(transformPromiseValue);
-                } else {
-                    this.node!.attributes[attr.name] = this.transformAttrVal(transformPromiseValue);
-                }
+
+                this.node!.attributes[attr.name] = this.transformAttrVal(watcherVal);
             } else {
                 this.node!.attributes[attr.name] = attr.value;
             }
         }
-
-        return promiseQueue;
     }
 
     private initEvents() {

@@ -28,7 +28,7 @@ describe("if 响应测试", () => {
         }
 
         let root = document.createElement("div");
-        let com = await new ParentView({
+        let com = new ParentView({
             codeBlock: true
         }).$mount(root);
 
@@ -36,10 +36,10 @@ describe("if 响应测试", () => {
         await sleep(200);
         com.model.focus = false;
         com.model.value = "123";
-        await com.$updatedRender();
+
         expect(root.innerHTML).toEqual("");
     });
-    it("频繁值变更", async () => {
+    it("频繁值变更", () => {
         class ParentView extends Component {
             model = {
                 a: true
@@ -58,19 +58,17 @@ describe("if 响应测试", () => {
         }
 
         let root = document.createElement("div");
-        let com = await new ParentView().$mount(root);
+        let com = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("<span>1</span>");
         com.model.a = false;
         com.model.a = true;
-        await com.$updatedRender();
         expect(root.innerHTML).toEqual("<span>1</span>");
         com.model.a = false;
         com.model.a = true;
         com.model.a = false;
-        await com.$updatedRender();
         expect(root.innerHTML).toEqual("<span>2</span>");
     });
-    it("基础", async () => {
+    it("基础", () => {
         class ParentView extends Component {
             model: any = {
                 a: {
@@ -88,14 +86,14 @@ describe("if 响应测试", () => {
         }
 
         let root = document.createElement("div");
-        let com = await new ParentView().$mount(root);
+        let com = new ParentView().$mount(root);
 
         expect(root.innerHTML).toEqual("xxxx");
 
         com.model.a = undefined;
         expect(root.innerHTML).toEqual("");
     });
-    it("基础1", async () => {
+    it("基础1", () => {
         class ParentView extends Component {
             model: any = {
                 a: undefined
@@ -120,13 +118,10 @@ describe("if 响应测试", () => {
                 <span></span>
                 `);
             };
-            async created() {
-                await sleep(15);
-            }
         }
 
         let root = document.createElement("div");
-        let com = await new ParentView().$mount(root);
+        let com = new ParentView().$mount(root);
 
         expect(root.innerHTML).toEqual("");
 
@@ -137,12 +132,12 @@ describe("if 响应测试", () => {
         expect(root.innerHTML.trim()).toEqual("1");
 
         com.model.a = [];
-        await sleep(15);
+
         com.model.a.push(1);
         expect(root.innerHTML.trim()).toEqual("1");
     });
 
-    it("基础2", async () => {
+    it("基础2", () => {
         class ParentView extends Component {
             model: any = {
                 a: {
@@ -170,7 +165,7 @@ describe("if 响应测试", () => {
         }
 
         let root = document.createElement("div");
-        let com = await new ParentView().$mount(root);
+        let com = new ParentView().$mount(root);
 
         expect(root.innerHTML).toEqual("xxxx");
 

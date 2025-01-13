@@ -2,7 +2,7 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 
 describe("template", () => {
-    it("基础", async () => {
+    it("基础", () => {
         class ParentView extends Component {
             template = function () {
                 return getAst(`
@@ -31,11 +31,11 @@ describe("template", () => {
         }
 
         let root = document.createElement("div");
-        await new ParentView().$mount(root);
+        new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("<input><span>0</span>");
     });
 
-    it("keepalive 保活", async () => {
+    it("keepalive 保活", () => {
         class Parent2View extends Component {
             public components = {
                 Children2View
@@ -75,26 +75,22 @@ describe("template", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new Parent2View().$mount(root);
+        let component = new Parent2View().$mount(root);
         expect(root.innerHTML.trim()).toEqual("");
         component.model.show = true;
 
-        await component.$updatedRender();
         expect(root.innerHTML.trim()).toEqual("1234<span>1</span>");
 
         //测试销毁再挂载是否keepalive
         component.model.show = false;
-        await component.$updatedRender();
         expect(root.innerHTML.trim()).toEqual("");
 
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML.trim()).toEqual("1234<span>2</span>");
 
         //复测
         component.model.show = false;
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML.trim()).toEqual("1234<span>3</span>");
 
         component.$destroy(true);

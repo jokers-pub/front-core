@@ -77,10 +77,10 @@ class HMRComponent extends Component {
 }
 
 describe("parser-component", () => {
-    it("基础", async () => {
+    it("基础", () => {
         let root = document.createElement("div");
 
-        let view = await new ParentView().$mount(root);
+        let view = new ParentView().$mount(root);
 
         expect(root.innerHTML).toEqual(
             `<div data-scoped-3333=""><p class="demo">3 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">1</b></span></p>XXX</div>`
@@ -94,7 +94,6 @@ describe("parser-component", () => {
 
         let selfEle = root.querySelector(".self");
 
-        await view.$updatedRender();
         (<HTMLSpanElement>selfEle).click();
 
         expect(root.innerHTML).toEqual(
@@ -115,16 +114,16 @@ describe("parser-component", () => {
         expect(root.innerHTML).toEqual("");
     });
 
-    it("热重载", async () => {
+    it("热重载", () => {
         let root = document.createElement("div");
 
-        let view = await new HMRComponent().$mount(root);
+        let view = new HMRComponent().$mount(root);
 
         view.addTime();
 
         expect(root.innerHTML).toEqual("<div><span>2</span></div>");
 
-        await view.$render(function () {
+        view.$render(function () {
             return getAst(` <div>
            <b>@model.time</b>
        </div>`);

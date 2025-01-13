@@ -49,25 +49,17 @@ describe("template", () => {
                 <span>我是组件2+@props.param</span>
                 `);
             };
-            async created() {
-                await sleep(30);
-            }
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("");
 
-        // component.test();
-        // await component.$updatedRender();
-        // expect(root.innerHTML).toEqual("<span>我是组件1</span>");
-
         component.test2();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件2+Zohar</span>");
 
         component.test3();
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span>我是组件2+hello</span>");
 
         component.$destroy();
@@ -130,41 +122,41 @@ describe("template", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("");
 
         component.test();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件10</span>");
 
         component.test2();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件20</span>");
 
         component.test();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件11</span>");
 
         component.test2();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件21</span>");
 
         //清除ChildrenView 缓存
         component.$getRef<VNode.Component<ComponentContainer>>("cmp")?.component?.removeCache("ChildrenView");
 
         component.test();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件10</span>");
 
         component.test2();
-        await component.$updatedRender();
+        await sleep(100);
         expect(root.innerHTML).toEqual("<span>我是组件22</span>");
 
         component.$destroy();
         expect(root.innerHTML).toEqual("");
     });
 
-    it("容器穿透渲染", async () => {
+    it("容器穿透渲染", () => {
         //主要测试，插槽作为参数穿透传递渲染，非常规
         class Com1 extends Component {
             template = function () {
@@ -196,11 +188,11 @@ describe("template", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new Com1().$mount(root);
+        new Com1().$mount(root);
         expect(root.innerHTML).toEqual("<span><b>1</b></span>");
     });
 
-    it("容器子区域加载", async () => {
+    it("容器子区域加载", () => {
         //主要测试，插槽作为参数穿透传递渲染，非常规
         class Com1 extends Component {
             model = {
@@ -234,11 +226,10 @@ describe("template", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new Com1().$mount(root);
+        let component = new Com1().$mount(root);
         expect(root.innerHTML).toEqual("<span><b>1</b></span>");
 
         component.model.arr[0].childrens.push(2);
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span><b>1</b><b>2</b></span>");
     });
 });

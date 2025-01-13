@@ -5,7 +5,7 @@ import { VNode } from "../vnode";
 export const DEFAULT_SECTION_TAG = "default";
 
 export class ParserRenderSection extends IParser<AST.PropertyOrFunctionCommand, VNode.RenderSection> {
-    public async parser() {
+    public parser() {
         let paramData = this.transformParam();
 
         this.node = new VNode.RenderSection(paramData.id, this.parent);
@@ -38,7 +38,7 @@ export class ParserRenderSection extends IParser<AST.PropertyOrFunctionCommand, 
             }
 
             //使用之前的node.parser去渲染
-            await (this.node.section.parser || this.ext).parserNodes(this.node.section.asts, this.node, this.node.ob);
+            (this.node.section.parser || this.ext).parserNodes(this.node.section.asts, this.node, this.node.ob);
         }
     }
 

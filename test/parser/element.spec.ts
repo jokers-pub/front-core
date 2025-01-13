@@ -19,10 +19,10 @@ class Source extends Component {
 }
 
 describe("parser-element", () => {
-    it("基础", async () => {
+    it("基础", () => {
         let data = new Source();
 
-        let root = await mountAst(
+        let root = mountAst(
             `<div target="@model.booleanVal" name="@model.attr1" age="@(model.attr2+1)" class= "className @model.class1" @click="event1" @tap="event2(2)">123</div>`,
             data
         );
@@ -33,30 +33,29 @@ describe("parser-element", () => {
 
         div.click();
 
-        await data.$updatedRender();
         expect(root.innerHTML).toEqual(`<div name="测试一下" age="4" class="className event1">123</div>`);
 
         div.dispatchEvent(new CustomEvent("tap"));
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<div name="测试一下" age="4" class="className 2">123</div>`);
 
         data.model.attr1 = "测试两下";
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(`<div name="测试两下" age="4" class="className 2">123</div>`);
     });
 
-    it("优化class值空格", async () => {
+    it("优化class值空格", () => {
         let data = new Source();
 
-        let root = await mountAst(`<div a="s  s     s  " class="s  s     s  ">123</div>`, data);
+        let root = mountAst(`<div a="s  s     s  " class="s  s     s  ">123</div>`, data);
 
         expect(root.innerHTML).toEqual(`<div a="s  s     s" class="s s s">123</div>`);
     });
 
-    it("组合动态属性", async () => {
+    it("组合动态属性", () => {
         let data = new Source();
 
-        let root = await mountAst(`<div name=" @model.attr1 hh@model.attr1 @(model.attr2)"></div>`, data);
+        let root = mountAst(`<div name=" @model.attr1 hh@model.attr1 @(model.attr2)"></div>`, data);
 
         expect(root.innerHTML).toEqual(`<div name="测试一下 hh测试一下 3"></div>`);
     });
@@ -67,10 +66,10 @@ describe("parser-element", () => {
         expect(() => mountAst(`<div @keydown.stop>123</div>`, data)).not.toThrow();
     });
 
-    it("class style 语法糖", async () => {
+    it("class style 语法糖", () => {
         let data = new Source();
 
-        let root = await mountAst(
+        let root = mountAst(
             `<div class="@([
             'ssss',
             (model.booleanVal?'booleanVal':''),
@@ -91,7 +90,7 @@ describe("parser-element", () => {
         );
 
         data.model.booleanVal = true;
-        await data.$updatedRender();
+
         expect(root.innerHTML).toEqual(
             '<div class="ssss booleanVal self-attr custom-attr" style="color: red; display: none;"></div>'
         );

@@ -3,7 +3,7 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 
 describe("keepalive", () => {
-    it("基础", async () => {
+    it("基础", () => {
         class ParentView extends Component {
             isKeepAlive = true;
             model = {
@@ -22,7 +22,7 @@ describe("keepalive", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("<span>0</span>");
         component.$destroy();
         expect(root.innerHTML).toEqual("");
@@ -81,7 +81,7 @@ describe("keepalive", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("");
 
         await component.test();
@@ -158,30 +158,26 @@ describe("keepalive", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual('<span>1</span><div class="container"><span>1</span></div>');
         //测试销毁再挂载是否keepalive
         component.model.show = false;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual('<span>2</span><div class="container"><span>2</span></div>');
 
         //复测
         component.model.show = false;
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual('<span>3</span><div class="container"><span>3</span></div>');
 
         component.$destroy(true);
         expect(root.innerHTML).toEqual("");
     });
 
-    it("命令组合使用", async () => {
+    it("命令组合使用", () => {
         class Parent2View extends Component {
             public components = {
                 Children2View
@@ -219,30 +215,26 @@ describe("keepalive", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new Parent2View().$mount(root);
+        let component = new Parent2View().$mount(root);
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span>1</span>");
         //测试销毁再挂载是否keepalive
         component.model.show = false;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span>2</span>");
 
         //复测
         component.model.show = false;
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("<span>3</span>");
 
         component.$destroy(true);
         expect(root.innerHTML).toEqual("");
     });
 
-    it("睡眠数据更新穿透", async () => {
+    it("睡眠数据更新穿透", () => {
         class ParentView extends Component {
             public components = {
                 ChildrenView
@@ -321,29 +313,23 @@ describe("keepalive", () => {
         }
 
         let root = document.createElement("div");
-        let component = await new ParentView().$mount(root);
+        let component = new ParentView().$mount(root);
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual('<span>1 | 0</span><div class="container"><span>1 | 0</span></div>');
         //测试销毁再挂载是否keepalive
         component.model.show = false;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("");
         component.model.time++;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual('<span>2 | 1</span><div class="container"><span>2 | 1</span></div>');
 
         //复测
         component.model.show = false;
         component.model.time++;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
-        await component.$updatedRender();
         expect(root.innerHTML).toEqual(
             '<span>3 | 2</span><div class="container"><span>3 | 2</span><span>动态2</span></div><span>动态1</span><span>动态0</span>'
         );

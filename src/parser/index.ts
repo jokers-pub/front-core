@@ -1,5 +1,5 @@
 import { AST } from "@joker.front/ast";
-import { Component, IS_RENDER } from "../component";
+import { Component } from "../component";
 import { IContainer } from "../utils/DI";
 import { Render } from "./render";
 import { ParserText } from "./text";
@@ -12,7 +12,6 @@ import { ParserCode } from "./command/code";
 import { checkIsComponent, ParserComponent } from "./component";
 import { ParserElement } from "./element";
 import { ParserRenderSection } from "./command/section";
-import { IParser } from "./parser";
 
 export type NodeChangeType = "append" | "remove" | "update" | "after-enter" | "after-leave";
 
@@ -49,8 +48,8 @@ export class ParserTemplate {
         }
     }
 
-    public async parser() {
-        await this.parserNodes(this.asts, this.root);
+    public parser() {
+        this.parserNodes(this.asts, this.root);
     }
 
     /**
@@ -63,43 +62,31 @@ export class ParserTemplate {
             this.weakup();
         }
 
-        this.render?.mount(root, () => {
-            this.ob[IS_RENDER].value = true;
-            //向下广播
-            this.root
-                .find((n) => n instanceof VNode.Component && !n.component?.[IS_RENDER].value)
-                .forEach((m) => {
-                    m.component && (m.component[IS_RENDER].value = true);
-                });
-        });
+        this.render?.mount(root);
     }
 
-    public promiseQueue: Set<Promise<any>> = new Set();
     /**
      * 编译AST子集
      * @param asts
      * @param parent
      */
-    public async parserNodes(asts: AST.Node[], parent: VNode.Node, ob?: Component & Record<string, any>) {
+    public parserNodes(asts: AST.Node[], parent: VNode.Node, ob?: Component & Record<string, any>) {
         if (this.asts.length === 0) return; //若被销毁责终止向下渲染
 
         for (let ast of asts) {
-            if (this.asts.length === 0) return;
-
-            let parseTarget: IParser<any, any> | undefined;
             if (ast.type === AST.NodeType.TEXT) {
-                parseTarget = new ParserText(ast as AST.Text, ob ?? this.ob, parent, this);
+                new ParserText(ast as AST.Text, ob ?? this.ob, parent, this).init();
             } else if (ast.type === AST.NodeType.COMMENT) {
-                parseTarget = new ParserComment(ast as AST.Comment, ob ?? this.ob, parent, this);
+                new ParserComment(ast as AST.Comment, ob ?? this.ob, parent, this).init();
             } else if (ast.type === AST.NodeType.COMPONENT) {
                 //动态组件
-                parseTarget = new ParserComponent(ast as AST.Component, ob ?? this.ob, parent, this);
+                new ParserComponent(ast as AST.Component, ob ?? this.ob, parent, this).init();
             } else if (ast.type === AST.NodeType.ELEMENT) {
                 let elementAST = <AST.Element>ast;
                 if (checkIsComponent(elementAST.tagName, ob ?? this.ob)) {
-                    parseTarget = new ParserComponent(elementAST, ob ?? this.ob, parent, this);
+                    new ParserComponent(elementAST, ob ?? this.ob, parent, this).init();
                 } else {
-                    parseTarget = new ParserElement(elementAST, ob ?? this.ob, parent, this);
+                    new ParserElement(elementAST, ob ?? this.ob, parent, this).init();
                 }
             } else if (ast.type === AST.NodeType.COMMAND) {
                 let cmdAST = <AST.Command>ast;
@@ -108,44 +95,25 @@ export class ParserTemplate {
                     case "if":
                     case "elseif":
                     case "else":
-                        parseTarget = new ParserCondition(cmdAST as AST.IfCommand, ob ?? this.ob, parent, this);
+                        new ParserCondition(cmdAST as AST.IfCommand, ob ?? this.ob, parent, this).init();
                         break;
                     case "for":
-                        parseTarget = new ParserList(cmdAST as AST.ForCommand, ob ?? this.ob, parent, this);
+                        new ParserList(cmdAST as AST.ForCommand, ob ?? this.ob, parent, this).init();
                         break;
                     case "RenderSection":
-                        parseTarget = new ParserRenderSection(
+                        new ParserRenderSection(
                             cmdAST as AST.PropertyOrFunctionCommand,
                             ob ?? this.ob,
                             parent,
                             this
-                        );
+                        ).init();
                         break;
                     case "section":
                         //区域不做任何解析，直到组件加载时，去即时处理
                         break;
                     default:
-                        parseTarget = new ParserCode(
-                            cmdAST as AST.PropertyOrFunctionCommand,
-                            ob ?? this.ob,
-                            parent,
-                            this
-                        );
+                        new ParserCode(cmdAST as AST.PropertyOrFunctionCommand, ob ?? this.ob, parent, this).init();
                         break;
-                }
-            }
-
-            if (parseTarget) {
-                let promise = parseTarget.init();
-                if (promise instanceof Promise) {
-                    this.promiseQueue.add(promise);
-                    await promise.finally(() => {
-                        this.promiseQueue.delete(promise as any);
-
-                        if (this.asts.length === 0 && parseTarget && parseTarget.isDestroy === false) {
-                            parseTarget?.destroy();
-                        }
-                    });
                 }
             }
         }

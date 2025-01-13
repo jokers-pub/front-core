@@ -13,7 +13,7 @@ const PROPS_DATA_PROXY = Symbol.for("JOKER_PROPS_DATA_PROXY");
 const PRIVATE_WATCHERS = Symbol.for("JOKER_PRIVATE_WATCHERS");
 const EVENT_DATA_KEY = Symbol.for("JOKER_EVENT_DATA_KEY");
 export const IS_DESTROY = Symbol.for("JOKER_IS_DESTROY");
-export const IS_RENDER = Symbol.for("JOKER_IS_RENDER");
+
 export const PARSER_TEMPLATE_TARGET = Symbol.for("JOKER_PARSER_TEMPLATE_TARGET");
 
 export type TemplateType = Array<AST.Node> | ((h: typeof RENDER_HANDLER) => Array<AST.Node>);
@@ -113,8 +113,6 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
     private [IS_DESTROY] = false;
 
-    private [IS_RENDER] = new ShallowObserver(false);
-
     //方法转换标记
     private [TRANSFORM_FUNCTION_FLAG] = false;
     /**
@@ -155,7 +153,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
      * 挂载
      * @param root
      */
-    public async $mount(root: any | VNode.Component): Promise<this> {
+    public $mount(root: any | VNode.Component): this {
         if (this[TRANSFORM_FUNCTION_FLAG] === false) {
             let getAllChildFuncProperties = () => {
                 let childMethods: string[] = [];
@@ -214,22 +212,15 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         this.model = observer(this.model);
 
-        await this.created();
-        if (this[IS_DESTROY]) {
-            return this;
-        }
+        this.created();
+
         this.$trigger("created");
 
         //有模板则执行render，否则不处理
-        this.template && (await this.$render());
-        if (this[IS_DESTROY]) {
-            return this;
-        }
-        await this.mounted();
+        this.template && this.$render();
+
+        this.mounted();
         this.$trigger("mounted");
-        if (!this.$root) {
-            this[IS_RENDER].value = true;
-        }
 
         return this;
     }
@@ -255,54 +246,6 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             }
         }
         this[PARSER_TEMPLATE_TARGET]?.nodeTransition(nodeOrRef, mode, name, callBack, type);
-    }
-
-    /**
-     * 等待下次渲染更新
-     * @param callBack
-     * @returns
-     */
-    public async $updatedRender(callBack?: Function) {
-        if (this[IS_DESTROY]) return;
-        return new Promise((resolve) => {
-            let checkPromise = async () => {
-                await Promise.resolve();
-                //收集此刻异步渲染（含子集）
-                let promiseQueue: Array<Promise<any>> = [...(this[PARSER_TEMPLATE_TARGET]?.promiseQueue || [])];
-                let childrens: any = this.$rootVNode?.find((n) => n instanceof VNode.Component);
-                childrens?.forEach((n: any) => {
-                    n?.component && promiseQueue.push(...(n.component[PARSER_TEMPLATE_TARGET]?.promiseQueue || []));
-                });
-
-                if (promiseQueue.length) {
-                    Promise.all(promiseQueue).finally(() => {
-                        if (this[IS_DESTROY]) return;
-
-                        callBack?.();
-                        resolve(undefined);
-                    });
-                } else {
-                    if (this[IS_DESTROY]) return;
-                    callBack?.();
-                    resolve(undefined);
-                }
-            };
-
-            if (this[IS_RENDER].value) {
-                //等待异步，收集
-                setTimeout(() => {
-                    checkPromise();
-                });
-            } else {
-                let [_, destroy] = this.$watch(
-                    () => this[IS_RENDER].value,
-                    (val) => {
-                        destroy();
-                        val && checkPromise();
-                    }
-                );
-            }
-        });
     }
 
     /**
@@ -440,7 +383,16 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             logger.warn(LOGTAG, `该组件还未挂载，不可以进行节点观察监听`);
         }
     }
-
+    /**
+     * 等待下次渲染更新
+     * @param callBack
+     * @returns
+     */
+    public async $updatedRender(callBack?: Function) {
+        if (this[IS_DESTROY]) return;
+        await Promise.resolve();
+        callBack?.();
+    }
     /**
      * 观察值变更
      * @param express
@@ -566,7 +518,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
      * @param keepalive 渲染新模板时，是否要保留之前的存活组件（高级用法）
      * @returns
      */
-    public async $render(newTemplate?: TemplateType, keepalive?: boolean): Promise<void> {
+    public $render(newTemplate?: TemplateType, keepalive?: boolean) {
         //之所以 将template放在前置，而不是判断root之后，是为了keepalive组件的热更新
         newTemplate ??= this.template;
         if (typeof newTemplate === "function") {
@@ -587,7 +539,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         this[PARSER_TEMPLATE_TARGET] ??= new ParserTemplate(this.template, this, this.$root);
 
-        await this[PARSER_TEMPLATE_TARGET].parser();
+        this[PARSER_TEMPLATE_TARGET].parser();
 
         if (this.$root) {
             this[PARSER_TEMPLATE_TARGET].mount(this.$root);
@@ -702,12 +654,12 @@ export class ComponentContainer extends Component<{
 
     private cache: Map<string, IComponent> = new Map();
 
-    async mounted() {
+    mounted() {
         this.$watch(
             () => this.props.name,
             async (componentName) => {
                 //先做清理
-                await this.$render([], true);
+                this.$render([], true);
 
                 //等待参数同步
                 await Promise.resolve();
@@ -717,7 +669,7 @@ export class ComponentContainer extends Component<{
             }
         );
 
-        await this.loadComponent(this.props.name);
+        this.loadComponent(this.props.name);
     }
     private propsVaule: any;
 
@@ -758,7 +710,7 @@ export class ComponentContainer extends Component<{
 
     async loadComponent(componentName?: string) {
         if (!componentName) {
-            await this.$render([], this.isKeepAlive);
+            this.$render([], this.isKeepAlive);
             return;
         }
 
@@ -767,7 +719,7 @@ export class ComponentContainer extends Component<{
         if (this.isKeepAlive) {
             let cacheComponent = this.cache.get(componentName);
             if (cacheComponent) {
-                await this.$render(
+                this.$render(
                     [createComponent(cacheComponent, { "transition-name": this.props["transition-name"] })],
                     true
                 );
@@ -797,7 +749,7 @@ export class ComponentContainer extends Component<{
 
             this.isKeepAlive && this.cache.set(componentName, cacheComponent);
 
-            await this.$render(
+            this.$render(
                 [createComponent(cacheComponent, { "transition-name": this.props["transition-name"] })],
                 this.isKeepAlive
             );

@@ -1,10 +1,10 @@
 import { AST } from "@joker.front/ast";
 import { IParser } from "../parser";
 import { VNode } from "../vnode";
-import { guid, isEmptyStr, logger } from "@joker.front/shared";
+import { isEmptyStr, logger } from "@joker.front/shared";
 
 export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
-    public async parser() {
+    public parser() {
         this.node = new VNode.Condition(this.ast.kind, this.parent);
 
         if (this.ast.kind !== "else") {
@@ -30,8 +30,8 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
                             }
                         }
                     }
-                    this.renderId = guid();
-                    this.reloadAllCondition(this.renderId);
+
+                    this.reloadAllCondition();
                 }
             });
 
@@ -41,8 +41,7 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
 
         this.appendNode();
 
-        this.renderId = guid();
-        await this.renderConditionChildren();
+        this.renderConditionChildren();
     }
 
     renderId?: string;
@@ -63,7 +62,7 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
      *
      * @return 返回当前渲染是否有显示变更
      */
-    private async renderConditionChildren() {
+    private renderConditionChildren() {
         let newShowState = false;
         let prevResult = this.getPrevIfResult();
 
@@ -88,7 +87,7 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
 
             if (newShowState) {
                 if (this.ast.childrens) {
-                    await this.ext.parserNodes(this.ast.childrens, this.node!, this.ob);
+                    this.ext.parserNodes(this.ast.childrens, this.node!, this.ob);
                 }
             }
 
@@ -135,7 +134,7 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
     /**
      * 重载所有的判断（从上到下）
      */
-    private async reloadAllCondition(renderId: string) {
+    private reloadAllCondition() {
         /**
          * 当当前值变更后，不需要向上遍历，因为值在读取时已经挂载观察者
          * 观察者响应时按照先后顺序去响应
@@ -145,7 +144,7 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
          */
 
         //执行自己的子集渲染
-        let isChange = await this.renderConditionChildren();
+        let isChange = this.renderConditionChildren();
 
         /**
          * 如果自己发生变更，则向下传递影响性
@@ -165,7 +164,7 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
          * 第一个if发生变更向下传递所有变更影响
          * 这时else if(a===2) 也收到变更通知， 这时发现自身展示状态无变更，则不向下传递影响
          */
-        if (isChange && renderId === this.renderId) {
+        if (isChange) {
             let next = this.node?.next;
 
             //有下一级 && 下一级是条件节点 && 下一级不是if起始
@@ -173,33 +172,27 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
                 let parserTarget = next[VNode.PARSERKEY];
 
                 if (parserTarget && parserTarget instanceof ParserCondition) {
-                    await parserTarget.renderConditionChildren();
-
-                    if (renderId !== this.renderId) return;
+                    parserTarget.renderConditionChildren();
                 }
 
                 next = next.next;
             }
         }
 
-        if (renderId === this.renderId) {
-            let next = this.node?.next;
-            if (!this.node?.result) {
-                this.destroyChildrens(true);
+        let next = this.node?.next;
+        if (!this.node?.result) {
+            this.destroyChildrens(true);
+        }
+
+        //有下一级 && 下一级是条件节点 && 下一级不是if起始
+        while (next && next instanceof VNode.Condition && next.cmdName !== "if") {
+            let parserTarget = next[VNode.PARSERKEY];
+
+            if (parserTarget && parserTarget instanceof ParserCondition) {
+                parserTarget.renderConditionChildren();
             }
 
-            //有下一级 && 下一级是条件节点 && 下一级不是if起始
-            while (next && next instanceof VNode.Condition && next.cmdName !== "if") {
-                let parserTarget = next[VNode.PARSERKEY];
-
-                if (parserTarget && parserTarget instanceof ParserCondition) {
-                    await parserTarget.renderConditionChildren();
-
-                    if (renderId !== this.renderId) return;
-                }
-
-                next = next.next;
-            }
+            next = next.next;
         }
     }
 }

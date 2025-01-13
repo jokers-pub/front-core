@@ -7,7 +7,6 @@ import { observer } from "../observer";
 
 import { DEFAULT_SECTION_TAG } from "./command/section";
 import { VNode } from "./vnode";
-import { resolveDeepPromisesInPlace } from "../utils";
 
 const LOGTAG = "组件解析";
 
@@ -21,7 +20,7 @@ export class ParserComponent extends IParser<
     },
     VNode.Component
 > {
-    public async parser(): Promise<void> {
+    public parser() {
         //唤醒时
         if (this.ast.node) {
             this.node = this.ast.node;
@@ -38,14 +37,12 @@ export class ParserComponent extends IParser<
 
         this.node = new VNode.Component(this.parent);
 
-        let promiseQueue = this.initPropData();
+        this.initPropData();
 
         this.appendNode();
-        this.node && this.initEvent();
-        if (promiseQueue.length) {
-            await Promise.all(promiseQueue);
-        }
-        await this.renderChildren();
+        this.initEvent();
+
+        this.renderChildren();
     }
 
     /**
@@ -68,7 +65,6 @@ export class ParserComponent extends IParser<
     }
 
     private initPropData() {
-        let promiseQueue = [];
         for (let attr of this.ast.attributes) {
             if (attr.name === "ref") {
                 if (isEmptyStr(attr.value)) {
@@ -91,55 +87,21 @@ export class ParserComponent extends IParser<
                     attr.express,
                     this.ob,
                     (newVal) => {
-                        let transformPromiseValue = resolveDeepPromisesInPlace(newVal);
-                        if (transformPromiseValue instanceof Promise) {
-                            transformPromiseValue
-                                .then((nv) => {
-                                    if (this.node) {
-                                        this.node!.propValues[attr.name] = nv;
+                        this.node!.propValues[attr.name] = newVal;
 
-                                        // 不做render更新，数据变更广播会向下传递
-                                        this.notifyNodeWatcher("update", attr.name);
-                                    }
-                                })
-                                .catch((e) => {
-                                    logger.error(LOGTAG, `${attr.express}异步处理失败`, e);
-                                });
-                        } else {
-                            this.node!.propValues[attr.name] = transformPromiseValue;
-
-                            // 不做render更新，数据变更广播会向下传递
-                            this.notifyNodeWatcher("update", attr.name);
-                        }
+                        // 不做render更新，数据变更广播会向下传递
+                        this.notifyNodeWatcher("update", attr.name);
                     },
                     true
                 );
 
-                let transformPromiseValue = resolveDeepPromisesInPlace(watcherValue);
-
-                if (transformPromiseValue instanceof Promise) {
-                    transformPromiseValue
-                        .then((nv) => {
-                            if (this.node) {
-                                this.node!.propValues[attr.name] = nv;
-                                //首次不做值变更通知
-                            }
-                        })
-                        .catch((e) => {
-                            logger.error(LOGTAG, `${attr.express}异步处理失败`, e);
-                        });
-
-                    promiseQueue.push(transformPromiseValue);
-                } else {
-                    this.node!.propValues[attr.name] = transformPromiseValue;
-                }
+                this.node!.propValues[attr.name] = watcherValue;
             } else {
                 this.node!.propValues[attr.name] = attr.value;
             }
         }
 
         this.node!.propValues = observer(this.node!.propValues);
-        return promiseQueue;
     }
 
     private initEvent() {
@@ -226,7 +188,7 @@ export class ParserComponent extends IParser<
             this.node!.name = this.node.component.name;
         }
 
-        await this.node.component!.$mount(this.node);
+        this.node.component!.$mount(this.node);
 
         //可能会造成挂载生命周期内部卸载,可能存在内不判断
         if (!this.node) return;

@@ -2,7 +2,7 @@ import { Component } from "../../src";
 import { getAst } from "../utils";
 
 describe("render", () => {
-    it("append-to-element验证", async () => {
+    it("append-to-element验证", () => {
         class View extends Component {
             model = {
                 show: false
@@ -28,14 +28,13 @@ describe("render", () => {
         let root = document.createElement("div");
         document.body.appendChild(root);
 
-        let component = await new View().$mount(root);
+        let component = new View().$mount(root);
 
         expect(document.body.innerHTML).toEqual(
             '<div><div class="container"><p>4</p></div><p>6</p></div><p append-to="body">1</p><p append-to="body">5</p>'
         );
 
         component.model.show = true;
-        await component.$updatedRender();
         expect(document.body.innerHTML).toEqual(
             '<div><div class="container"><p>3</p><p>4</p></div><p>6</p></div><p append-to="body">1</p><p append-to="body">5</p><p append-to="body">2</p>'
         );
@@ -44,7 +43,7 @@ describe("render", () => {
         expect(document.body.innerHTML).toEqual("<div></div>");
     });
 
-    it("append-to-component验证", async () => {
+    it("append-to-component验证", () => {
         document.body.innerHTML = "";
         class View extends Component {
             model = {
@@ -81,7 +80,7 @@ describe("render", () => {
         let root = document.createElement("div");
         document.body.appendChild(root);
 
-        let component = await new View().$mount(root);
+        let component = new View().$mount(root);
 
         expect(document.body.innerHTML).toEqual(
             '<div><div class="container"><p>4</p></div><p>6</p></div><p>1</p><p>5</p>'
@@ -89,7 +88,6 @@ describe("render", () => {
 
         component.model.show = true;
 
-        await component.$updatedRender();
         expect(document.body.innerHTML).toEqual(
             '<div><div class="container"><p>3</p><p>4</p></div><p>6</p></div><p>1</p><p>5</p><p>2</p>'
         );

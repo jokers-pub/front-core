@@ -12,7 +12,7 @@ export function getAst(template: string) {
     return asts;
 }
 
-export async function mountAst(template: string, ob: ObType) {
+export function mountAst(template: string, ob: ObType) {
     let root = document.createElement("div");
 
     ob.$mount(root);
@@ -23,7 +23,7 @@ export async function mountAst(template: string, ob: ObType) {
     let asts = new Function("h", "return" + astStr)(RENDER_HANDLER);
 
     let templates = new ParserTemplate(asts, ob);
-    await templates.parser();
+    templates.parser();
     templates.mount(root);
 
     return root;
