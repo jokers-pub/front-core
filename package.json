@@ -26,6 +26,10 @@
         "release": "npm run test && npm run build && joker_release_library",
         "release:prod": "npm run test && npm run build:prod && npm publish --access public --registry https://registry.npmjs.org/"
     },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jokers-pub/front-core.git"
+    },
     "author": "Zohar",
     "license": "MIT",
     "homepage": "https://front.jokers.pub",
