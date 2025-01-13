@@ -226,8 +226,6 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
             await this.mounted();
             if (this[IS_DESTROY]) return;
-            await this.$nextUpdatedRender();
-            if (this[IS_DESTROY]) return;
 
             this.$trigger("mounted");
         };
