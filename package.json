@@ -18,6 +18,10 @@
         "types/*",
         "README.md"
     ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jokers-pub/front-core.git"
+    },
     "scripts": {
         "test": "jest",
         "test:temp": "jest test/other/event.spec.ts",
