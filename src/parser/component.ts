@@ -1,5 +1,5 @@
 import { AST, EXPRESSHANDLERTAG } from "@joker.front/ast";
-import { isEmptyStr, logger, noop } from "@joker.front/shared";
+import { isEmptyStr, logger, noop, remove } from "@joker.front/shared";
 import { IParser } from "./parser";
 import { JOKER_COMPONENT_TAG, getGlobalComponent } from "../component";
 import { Component, SectionType } from "../component";
@@ -20,6 +20,7 @@ export class ParserComponent extends IParser<
     },
     VNode.Component
 > {
+    loadPromise?: Promise<any>;
     public parser() {
         //唤醒时
         if (this.ast.node) {
@@ -42,7 +43,16 @@ export class ParserComponent extends IParser<
         this.appendNode();
         this.initEvent();
 
-        this.renderChildren();
+        this.loadPromise = this.renderChildren();
+
+        this.ext.promiseQueue.add(
+            this.loadPromise.finally(() => {
+                if (this.loadPromise) {
+                    this.ext.promiseQueue.delete(this.loadPromise);
+                    this.loadPromise = undefined;
+                }
+            })
+        );
     }
 
     /**
@@ -145,58 +155,64 @@ export class ParserComponent extends IParser<
     }
 
     private async renderChildren() {
-        if ("tagName" in this.ast) {
-            let component = this.ob.components[this.ast.tagName] || getGlobalComponent(this.ast.tagName);
-            if (component === undefined) {
-                logger.error(LOGTAG, `渲染组件失败，未找到名称为'${this.ast.tagName}'的私有组件/全局组件`);
-                return;
-            }
+        return new Promise(async (resolve) => {
+            if ("tagName" in this.ast) {
+                let component = this.ob.components[this.ast.tagName] || getGlobalComponent(this.ast.tagName);
+                if (component === undefined) {
+                    logger.error(LOGTAG, `渲染组件失败，未找到名称为'${this.ast.tagName}'的私有组件/全局组件`);
+                    return;
+                }
 
-            if (!(JOKER_COMPONENT_TAG in component)) {
-                component = (await component()).default;
-            }
+                if (!(JOKER_COMPONENT_TAG in component)) {
+                    component = (await component()).default;
+                }
 
-            //可能被销毁
-            if (this.node) {
+                //可能被销毁
+                if (this.node) {
+                    let sections = this.getSections();
+                    this.node.name = this.ast.tagName;
+                    this.node.component = new component(this.node?.propValues, sections, this.node?.keepalive);
+                } else {
+                    return;
+                }
+            } else if (typeof this.ast.component === "function") {
                 let sections = this.getSections();
-                this.node.name = this.ast.tagName;
-                this.node.component = new component(this.node?.propValues, sections, this.node?.keepalive);
+
+                this.node!.component = new this.ast.component(
+                    this.node?.propValues,
+                    sections,
+                    this.node?.keepalive
+                ) as Component;
             } else {
-                return;
+                this.node!.component = this.ast.component as Component;
             }
-        } else if (typeof this.ast.component === "function") {
-            let sections = this.getSections();
 
-            this.node!.component = new this.ast.component(
-                this.node?.propValues,
-                sections,
-                this.node?.keepalive
-            ) as Component;
-        } else {
-            this.node!.component = this.ast.component as Component;
-        }
+            if (!this.node) return;
 
-        if (!this.node) return;
+            //如果没有name时取初始化后的name
+            if (
+                !this.node.name &&
+                "name" in this.node!.component &&
+                this.node.component.name &&
+                typeof this.node.component.name === "string"
+            ) {
+                this.node!.name = this.node.component.name;
+            }
 
-        //如果没有name时取初始化后的name
-        if (
-            !this.node.name &&
-            "name" in this.node!.component &&
-            this.node.component.name &&
-            typeof this.node.component.name === "string"
-        ) {
-            this.node!.name = this.node.component.name;
-        }
+            this.node.component!.$on("mounted", () => {
+                resolve(undefined);
+            });
 
-        this.node.component!.$mount(this.node);
+            this.node.component!.$mount(this.node);
 
-        //可能会造成挂载生命周期内部卸载,可能存在内不判断
-        if (!this.node) return;
-        let component = this.node?.component as Component;
+            //可能会造成挂载生命周期内部卸载,可能存在内不判断
+            if (!this.node) return;
+            let component = this.node?.component as Component;
 
-        if (component.isKeepAlive) {
-            this.ast.node = this.node;
-        }
+            if (component.isKeepAlive) {
+                this.ast.node = this.node;
+            }
+        });
     }
 
     private getSections(): Record<string, SectionType> {
@@ -270,6 +286,10 @@ export class ParserComponent extends IParser<
     }
 
     protected beforeDestroy(keepalive?: boolean) {
+        if (this.loadPromise) {
+            this.ext.promiseQueue.delete(this.loadPromise);
+            this.loadPromise = undefined;
+        }
         if (keepalive === true && this.node?.component?.isKeepAlive) {
             this.node?.component?.$destroy();
         } else {

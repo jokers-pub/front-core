@@ -232,4 +232,55 @@ describe("template", () => {
         component.model.arr[0].childrens.push(2);
         expect(root.innerHTML).toEqual("<span><b>1</b><b>2</b></span>");
     });
+
+    it("ref 异步组件加载验证", async () => {
+        //主要测试，插槽作为参数穿透传递渲染，非常规
+        let test = 0;
+        class Com1 extends Component {
+            model = {
+                arr: [{ childrens: [1] }]
+            };
+            template = function () {
+                return getAst(`
+                @for(let item of model.arr){
+                    <Com2>
+                        @for(let children of item.childrens){
+                            <b ref="b">@children</b>
+                        }
+                    </Com2>
+                }
+                `);
+            };
+
+            components = {
+                Com2: async () => {
+                    await sleep(10);
+                    return { default: Com2 };
+                }
+            };
+            mounted() {
+                test = this.$refs.b.length;
+            }
+        }
+
+        class Com2 extends Component {
+            template = function () {
+                return getAst(`
+                <span>
+                    @RenderSection()
+                </span>
+                `);
+            };
+        }
+
+        let root = document.createElement("div");
+        let component = new Com1().$mount(root);
+        await component.$nextUpdatedRender();
+
+        expect(root.innerHTML).toEqual("<span><b>1</b></span>");
+        expect(component.$refs.b.length).toEqual(1);
+        expect(test).toEqual(1);
+        component.model.arr[0].childrens.push(2);
+        expect(root.innerHTML).toEqual("<span><b>1</b><b>2</b></span>");
+    });
 });

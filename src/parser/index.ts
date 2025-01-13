@@ -26,6 +26,8 @@ export class ParserTemplate {
 
     public sleeped: boolean = false;
 
+    public promiseQueue: Set<Promise<any>> = new Set();
+
     /**
      * node变更观察者
      */

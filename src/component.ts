@@ -219,8 +219,15 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
             //有模板则执行render，否则不处理
             this.template && this.$render();
-            await Promise.resolve();
-            this.mounted();
+
+            await this.$nextUpdatedRender();
+
+            if (this[IS_DESTROY]) return;
+
+            await this.mounted();
+
+            if (this[IS_DESTROY]) return;
+
             this.$trigger("mounted");
         };
         if (createdPromise && createdPromise instanceof Promise) {
@@ -233,6 +240,18 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         }
 
         return this;
+    }
+
+    public $nextUpdatedRender(callback?: Function) {
+        return new Promise((resolve) => {
+            Promise.all(Array.from(this[PARSER_TEMPLATE_TARGET]?.promiseQueue || [])).finally(async () => {
+                if (this[IS_DESTROY]) return;
+
+                resolve(undefined);
+
+                callback?.();
+            });
+        });
     }
 
     /**
