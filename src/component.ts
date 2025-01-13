@@ -1,6 +1,6 @@
 import { AST, IComponent, RENDER_HANDLER, createCommand, createComponent } from "@joker.front/ast";
 import { logger, remove, toLowerCase } from "@joker.front/shared";
-import { observer, ShallowObserver } from "./observer";
+import { observer } from "./observer";
 import { BREAK_WATCH_UPDATE, Watcher } from "./observer/watcher";
 import { NodeChangeType, ParserTemplate } from "./parser";
 import { VNode } from "./parser/vnode";
@@ -109,7 +109,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
     private [PRIVATE_WATCHERS]: Watcher<any>[] = [];
 
-    private [EVENT_DATA_KEY]: Map<string, VNode.EventCallBack[]> = new Map();
+    private [EVENT_DATA_KEY]: Map<string, Set<VNode.EventCallBack>> = new Map();
 
     private [IS_DESTROY] = false;
 
@@ -302,6 +302,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         }
 
         this[PRIVATE_WATCHERS].length = 0;
+
         this[PARSER_TEMPLATE_TARGET]?.destroyWathcers();
         //#endregion
 
@@ -464,12 +465,12 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         let callBacks = this[EVENT_DATA_KEY].get(eventName);
 
         if (callBacks === undefined) {
-            callBacks = [];
+            callBacks = new Set();
             this[EVENT_DATA_KEY].set(eventName, callBacks);
         }
 
-        if (callBacks?.includes(callBack) === false) {
-            callBacks.push(callBack);
+        if (callBacks?.has(callBack) === false) {
+            callBacks.add(callBack);
         }
     }
 
@@ -483,9 +484,9 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         if (callBacks) {
             if (callBack) {
-                remove<VNode.EventCallBack>(callBacks, callBack);
+                callBacks.delete(callBack);
             } else {
-                callBacks.length = 0;
+                callBacks.clear();
             }
         }
     }
@@ -517,7 +518,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         //实例事件响应
         let callBacks = this[EVENT_DATA_KEY].get(eventName);
-        if (callBacks?.length) {
+        if (callBacks?.size) {
             [...callBacks].forEach((m) => {
                 m(e);
             });
@@ -525,7 +526,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         //全局补充
         let globalCallBacks = this[EVENT_DATA_KEY].get("*");
-        if (globalCallBacks?.length) {
+        if (globalCallBacks?.size) {
             [...globalCallBacks].forEach((m) => {
                 m(e);
             });

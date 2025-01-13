@@ -155,7 +155,7 @@ export class ParserComponent extends IParser<
     }
 
     private async renderChildren() {
-        return new Promise(async (resolve) => {
+        return new Promise(async (resolve, reject) => {
             if ("tagName" in this.ast) {
                 let component = this.ob.components[this.ast.tagName] || getGlobalComponent(this.ast.tagName);
                 if (component === undefined) {
@@ -198,10 +198,19 @@ export class ParserComponent extends IParser<
             ) {
                 this.node!.name = this.node.component.name;
             }
+            let self = this;
+            let destoryReject = function () {
+                if (self.loadPromise) {
+                    resolve(undefined);
+                }
+            };
 
             this.node.component!.$on("mounted", () => {
+                this.node?.component.$off("beforeDestroy", destoryReject);
                 resolve(undefined);
             });
+
+            this.node.component!.$on("beforeDestroy", destoryReject);
 
             this.node.component!.$mount(this.node);
 
