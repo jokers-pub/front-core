@@ -75,15 +75,17 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
 
                     this.destroyChildrens(keepalive);
 
-                    //remove 应该按照append倒序执行
-                    this.ext.render?.removeNode(this.node);
+                    //可能存在before等钩子中触发了当前的移出
+                    if (this.node) {
+                        //remove 应该按照append倒序执行
+                        this.ext.render?.removeNode(this.node);
 
-                    this.parent.childrens && remove(this.parent.childrens, this.node);
+                        this.parent.childrens && remove(this.parent.childrens, this.node);
 
-                    //通知放最后
-                    this.notifyNodeWatcher("remove");
-
-                    this.destroyOtherData();
+                        //通知放最后
+                        this.notifyNodeWatcher("remove");
+                        this.destroyOtherData();
+                    }
                 }
             };
 
