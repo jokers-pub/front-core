@@ -87,27 +87,35 @@ export namespace VNode {
 
         /**
          * 返回所有匹配的子元素
-         * @param filter 返回true则记录，返回false则跳过该元素的子集
+         * @param filter 返回true则记录
+         * @param whenBreak 自定义停止条件，若返回true，则不再向下查询
+         * @param deepSearch 是否深度查询，默认为false，若为true 匹配成功项也会向下查询
          * @returns
          */
         public find<T extends VNode.Node = VNode.Element & VNode.Component>(
             filter: (node: VNode.Node) => true | any,
-            childrens?: Array<VNode.Node>,
+            whenBreak?: (node: VNode.Node) => true | any,
+            deepSearch?: boolean,
+            _childrens?: Array<VNode.Node>,
             _out?: Array<VNode.Node>
         ): Array<T> {
             let result: Array<VNode.Node> = _out ?? [];
 
-            childrens ??= this.childrens;
+            _childrens ??= this.childrens;
 
-            if (childrens) {
-                for (let item of childrens) {
+            if (_childrens) {
+                for (let item of _childrens) {
                     let findResult = filter(item);
                     if (findResult === true) {
                         result.push(item);
+
+                        if (!deepSearch) continue;
                     }
 
+                    if (whenBreak?.(item) === true) continue;
+
                     if (item.childrens) {
-                        this.find(filter, item.childrens, result);
+                        this.find(filter, whenBreak, deepSearch, item.childrens, result);
                     }
                 }
             }
