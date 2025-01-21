@@ -59,13 +59,13 @@ export namespace VNode {
 
         /**
          * 匹配第一个符合要求的祖先元素
-         * @param match
-         * @param breakWhenVRoot 是否过滤到当前视图根时中断
+         * @param filter 过滤条件 返回true 则返回当前节点
+         * @param shouldBreak 自定义停止条件，若返回true，则不再向上查询
          * @returns
          */
         public closest<T extends VNode.Node = VNode.Element & VNode.Component>(
-            filter: (node: VNode.Node) => any | any,
-            breakWhenVRoot?: boolean
+            filter: (node: VNode.Node) => true | any,
+            shouldBreak?: (node: VNode.Node) => true | any
         ): T | undefined {
             if (filter(this) === true) {
                 return this as unknown as T;
@@ -74,12 +74,10 @@ export namespace VNode {
             let parent = this.parent;
 
             while (parent) {
-                if (breakWhenVRoot && parent instanceof VNode.Root) return;
-
                 if (filter(parent) === true) {
                     return parent as T;
                 }
-
+                if (shouldBreak?.(parent) === true) break;
                 parent = parent.parent;
             }
             return;
@@ -88,13 +86,13 @@ export namespace VNode {
         /**
          * 返回所有匹配的子元素
          * @param filter 返回true则记录
-         * @param whenBreak 自定义停止条件，若返回true，则不再向下查询
+         * @param shouldBreak 自定义停止条件，若返回true，则不再向下查询
          * @param deepSearch 是否深度查询，默认为false，若为true 匹配成功项也会向下查询
          * @returns
          */
         public find<T extends VNode.Node = VNode.Element & VNode.Component>(
             filter: (node: VNode.Node) => true | any,
-            whenBreak?: (node: VNode.Node) => true | any,
+            shouldBreak?: (node: VNode.Node) => true | any,
             deepSearch?: boolean,
             _childrens?: Array<VNode.Node>,
             _out?: Array<VNode.Node>
@@ -112,10 +110,10 @@ export namespace VNode {
                         if (!deepSearch) continue;
                     }
 
-                    if (whenBreak?.(item) === true) continue;
+                    if (shouldBreak?.(item) === true) continue;
 
                     if (item.childrens) {
-                        this.find(filter, whenBreak, deepSearch, item.childrens, result);
+                        this.find(filter, shouldBreak, deepSearch, item.childrens, result);
                     }
                 }
             }
