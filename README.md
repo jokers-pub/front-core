@@ -73,6 +73,8 @@ A front-end framework with a built-in visualization tool: [Low-code Platform](ht
 
 ## Documentation
 
+[Help Documentation](https://front.jokers.pub)
+
 [Official Website](https://front.jokers.pub)
 
 [Official UI Library](https://ui.jokers.pub)
@@ -153,6 +155,8 @@ npm run dev
 ![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img3.jpg)
 
 ## 文档
+
+[帮助文档](https://front.jokers.pub)
 
 [官网](https://front.jokers.pub)
 
