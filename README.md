@@ -83,7 +83,7 @@ A front-end framework with a built-in visualization tool: [Low-code Platform](ht
 
 ## Wechat
 
-![Wechat](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/Wechat.jpg)
+![Wechat](https://static.jokers.pub/lowcode/wechat-group.jpg)
 
 # Joker
 
@@ -170,4 +170,4 @@ npm run dev
 
 ## Wechat
 
-![Wechat](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/Wechat.jpg)
+![Wechat](https://static.jokers.pub/lowcode/wechat-group.jpg)
