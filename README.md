@@ -81,6 +81,10 @@ A front-end framework with a built-in visualization tool: [Low-code Platform](ht
 
 [Low-code Platform](https://jokers.pub)
 
+## Wechat
+
+![Wechat](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/Wechat.jpg)
+
 # Joker
 
 Joker 是一个旨在为所有开发场景提供支持的框架平台。其中，Joker.front 是 Joker 平台下的前端开发框架，它提供标准化的前端开发标准，采用面向对象、组件化的编程模型，助力您高效开发用户界面。无论是简单还是复杂的界面，Joker.front 都能轻松应对。
@@ -163,3 +167,7 @@ npm run dev
 [官方 UI 库](https://ui.jokers.pub)
 
 [低代码平台](https://jokers.pub)
+
+## Wechat
+
+![Wechat](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/Wechat.jpg)
