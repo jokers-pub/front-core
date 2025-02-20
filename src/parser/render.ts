@@ -553,9 +553,14 @@ export namespace Render {
                     if (index !== undefined && parent.childrens?.length && parentEl) {
                         let prevNodeIndex = index - 1;
                         if (prevNodeIndex < 0) {
-                            let firstNode = parent.childrens[0].output.previousSibling;
+                            let firstNode = nodeEl.nextSibling;
 
-                            parentEl.insertBefore(element, firstNode || parentEl.firstChild);
+                            if (firstNode && parentEl.contains(firstNode)) {
+                                // 可能下节点 时append-to,脱离文档流
+                                parentEl.insertBefore(element, firstNode);
+                            } else {
+                                parentEl.insertBefore(element, parentEl.firstChild);
+                            }
 
                             return;
                         } else {
