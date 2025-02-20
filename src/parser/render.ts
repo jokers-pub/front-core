@@ -556,7 +556,7 @@ export namespace Render {
                             let firstNode = nodeEl.nextSibling;
 
                             if (firstNode && parentEl.contains(firstNode)) {
-                                // 可能下节点 时append-to,脱离文档流
+                                // 可能下节点 是append-to,脱离文档流
                                 parentEl.insertBefore(element, firstNode);
                             } else {
                                 parentEl.insertBefore(element, parentEl.firstChild);
