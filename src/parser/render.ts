@@ -553,7 +553,10 @@ export namespace Render {
                     if (index !== undefined && parent.childrens?.length && parentEl) {
                         let prevNodeIndex = index - 1;
                         if (prevNodeIndex < 0) {
-                            parentEl.insertBefore(element, parentEl.firstChild);
+                            let firstNode = parent.childrens[0].output.previousSibling;
+
+                            parentEl.insertBefore(element, firstNode || parentEl.firstChild);
+
                             return;
                         } else {
                             let prevNode = parent.childrens[prevNodeIndex];

@@ -24,7 +24,7 @@
     },
     "scripts": {
         "test": "jest",
-        "test:temp": "jest test/other/event.spec.ts",
+        "test:temp": "jest test/other/for-update.spec.ts",
         "build": "joker_build_library --sourcemap=false",
         "build:prod": "joker_build_library --sourcemap=false --terser",
         "release": "npm run test && npm run build && joker_release_library",

@@ -99,4 +99,39 @@ describe("FOR循环更新测试", () => {
         component.model.list.shift();
         expect(root.innerHTML).toEqual("<span>2</span><span>x</span>");
     });
+
+    it("混合模式", () => {
+        class View extends Component {
+            model = {
+                list: [{ id: 1 }, { id: 2 }, { id: 3 }]
+            };
+            template = function () {
+                return getAst(`
+                <ul>
+                    <li>0</li>
+                    @if(model.list.length){
+                        @for(let (index,item) in model.list){
+                            <li>@item.id</li>
+                        }
+                    }
+                </ul>
+                `);
+            };
+        }
+
+        let root = document.createElement("div");
+        let component = new View();
+        component.$mount(root);
+
+        expect(root.innerHTML).toEqual("<ul><li>0</li><li>1</li><li>2</li><li>3</li></ul>");
+
+        component.model.list.shift();
+        expect(root.innerHTML).toEqual("<ul><li>0</li><li>2</li><li>3</li></ul>");
+
+        component.model.list[0].id = 9;
+        expect(root.innerHTML).toEqual("<ul><li>0</li><li>9</li><li>3</li></ul>");
+
+        component.model.list = [{ id: 8 }, { id: 7 }];
+        expect(root.innerHTML).toEqual("<ul><li>0</li><li>8</li><li>7</li></ul>");
+    });
 });
