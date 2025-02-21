@@ -109,7 +109,7 @@ describe("FOR循环更新测试", () => {
         expect(root.innerHTML).toEqual("<span>2</span><span>x</span>");
     });
 
-    it("混合模式", () => {
+    it("混合模式", async () => {
         class View extends Component {
             model = {
                 list: [{ id: 1 }, { id: 2 }, { id: 3 }]
@@ -142,5 +142,9 @@ describe("FOR循环更新测试", () => {
 
         component.model.list = [{ id: 8 }, { id: 7 }];
         expect(root.innerHTML).toEqual("<ul><li>0</li><li>8</li><li>7</li></ul>");
+
+        moveUp(component.model.list, 1);
+        await component.$nextUpdatedRender();
+        expect(root.innerHTML).toEqual("<ul><li>0</li><li>7</li><li>8</li></ul>");
     });
 });

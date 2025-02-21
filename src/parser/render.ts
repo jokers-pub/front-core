@@ -546,18 +546,17 @@ export namespace Render {
                     }
                     parentEl.appendChild(element);
                 } else if (this.isCommandGroup(parent)) {
-                    let nodeEl = parent.output as Element;
                     //如果if 或者 for循环中存在 append-to 则直接向body输出，不考虑body输出顺序
-                    let parentEl = nodeEl?.parentNode;
+                    let parentEl = parent.output?.parentNode as HTMLElement;
 
                     if (index !== undefined && parent.childrens?.length && parentEl) {
                         let prevNodeIndex = index - 1;
                         if (prevNodeIndex < 0) {
-                            let firstNode = nodeEl.nextSibling;
+                            let firstNode = getNodePrevInstallPosition(node);
 
-                            if (firstNode && parentEl.contains(firstNode)) {
+                            if (firstNode && parentEl.contains(firstNode.output)) {
                                 // 可能下节点 是append-to,脱离文档流
-                                parentEl.insertBefore(element, firstNode);
+                                firstNode.output.after(element);
                             } else {
                                 parentEl.insertBefore(element, parentEl.firstChild);
                             }
@@ -577,7 +576,7 @@ export namespace Render {
 
                     //不会出现没有parentEl的场景
                     if (parentEl) {
-                        parentEl.insertBefore(element, nodeEl);
+                        parentEl.insertBefore(element, parent.output);
                     }
                 } else {
                     logger.error(LOGTAG, `该节点不支持嵌套子集，请检查。`, { node, parent });
@@ -823,6 +822,38 @@ function toMs(s: string): number {
     if (s === "auto") return 0;
 
     return Number(s.slice(0, -1).replace(",", ".")) * 1000;
+}
+
+function getNodePrevInstallPosition(node: VNode.Node): VNode.Node | undefined {
+    let prev = node.prev;
+    //平级找
+    while (prev) {
+        if (
+            prev instanceof VNode.Element ||
+            prev instanceof VNode.Comment ||
+            prev instanceof VNode.Text ||
+            prev instanceof VNode.Component ||
+            prev instanceof VNode.Element
+        ) {
+            return prev;
+        }
+        prev = prev.prev;
+    }
+
+    //往上找
+    let parent = node.parent;
+
+    while (parent) {
+        if (parent instanceof VNode.Element) return;
+
+        let result = getNodePrevInstallPosition(parent);
+
+        if (result) return result;
+
+        parent = parent.parent;
+    }
+
+    return;
 }
 
 // 创建一个自定义元素
