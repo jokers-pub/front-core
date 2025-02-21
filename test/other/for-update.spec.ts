@@ -73,6 +73,15 @@ describe("FOR循环更新测试", () => {
         moveDown(component.model.list, 0);
         await Promise.resolve();
         expect(root.innerHTML).toEqual("<span>333</span><span>2</span><span>3</span><span>4</span>");
+
+        moveUp(component.model.list, 1);
+        await Promise.resolve();
+        expect(root.innerHTML).toEqual("<span>2</span><span>333</span><span>3</span><span>4</span>");
+
+        let item = component.model.list[2];
+        component.model.list.splice(0, 0, item);
+        await component.$nextUpdatedRender();
+        expect(root.innerHTML).toEqual("<span>3</span><span>2</span><span>333</span><span>3</span><span>4</span>");
     });
 
     it("带索引", () => {
