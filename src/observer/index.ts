@@ -28,21 +28,25 @@ const OBJECTPROXY_DEPLEVE_ID = Symbol.for("__JOKER_OBJECTPROXY_DEPLEVE_ID__");
  * @returns
  */
 function checkEnableProxy(data: any): boolean {
-    return (
-        data !== undefined &&
-        data !== null &&
-        isObject(data) &&
-        data instanceof Window === false &&
-        data instanceof Watcher === false &&
-        data !== window.parent &&
-        (Array.isArray(data) || isPlainObject(data) || data instanceof Set || data instanceof Map) &&
-        //非冻结
-        !Object.isFrozen(data) &&
-        !(data instanceof Element) &&
-        !(JOKER_VNODE_TAG in data) &&
-        !(JOKER_SHALLOW_OBSERVER_TAG in data) &&
-        !(JOKER_COMPONENT_TAG in data)
-    );
+    try {
+        return (
+            data !== undefined &&
+            data !== null &&
+            isObject(data) &&
+            data instanceof Window === false &&
+            data instanceof Watcher === false &&
+            data !== window.parent &&
+            (Array.isArray(data) || isPlainObject(data) || data instanceof Set || data instanceof Map) &&
+            //非冻结
+            !Object.isFrozen(data) &&
+            !(data instanceof Element) &&
+            !(JOKER_VNODE_TAG in data) &&
+            !(JOKER_SHALLOW_OBSERVER_TAG in data) &&
+            !(JOKER_COMPONENT_TAG in data)
+        );
+    } catch {
+        return false;
+    }
 }
 
 function proxyData<T extends object | Set<any>>(data: T): T {
@@ -194,15 +198,11 @@ function proxyData<T extends object | Set<any>>(data: T): T {
     //对所有可被劫持的属性进行深度遍历劫持
     for (let key in data) {
         let itemData = data[key];
-        try {
-            //可被代理 && 没有代理
-            if (checkEnableProxy(itemData) && !getProxyDep(itemData)) {
-                //@ts-ignore
-                result[key] = proxyData(data[key]);
-            }
-        } catch (e: any) {
-            logger.warn("数据劫持", "深度数据劫持出现异常" + e.message);
-            console.log(data, key, itemData);
+
+        //可被代理 && 没有代理
+        if (checkEnableProxy(itemData) && !getProxyDep(itemData)) {
+            //@ts-ignore
+            result[key] = proxyData(data[key]);
         }
     }
     resetData = false;
