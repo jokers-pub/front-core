@@ -614,6 +614,8 @@ export namespace Render {
                     attrVal = newClass.join(" ");
                 } else if (isObject(attrVal)) {
                     for (let name in attrVal) {
+                        name = name.trim();
+                        if (!name) continue;
                         if (attrVal[name]) {
                             el.classList.add(name);
                         } else {
