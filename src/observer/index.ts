@@ -8,7 +8,7 @@ import {
     logger
 } from "@joker.front/shared";
 import { Dep, notifyGroupDeps } from "./dep";
-import { JOKER_COMPONENT_TAG, JOKER_VNODE_TAG, Watcher } from "../index";
+import { Component, JOKER_COMPONENT_TAG, JOKER_VNODE_TAG, Watcher } from "../index";
 
 /**
  * 存放劫持对象的Dep的Key
@@ -36,6 +36,7 @@ function checkEnableProxy(data: any): boolean {
             data instanceof Window === false &&
             data instanceof Watcher === false &&
             data !== window.parent &&
+            data instanceof Component === false &&
             (Array.isArray(data) || isPlainObject(data) || data instanceof Set || data instanceof Map) &&
             //非冻结
             !Object.isFrozen(data) &&
