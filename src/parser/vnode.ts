@@ -29,6 +29,7 @@ export namespace VNode {
 
         public childrens?: Node[];
 
+        public ref?: string;
         /**
          * 当前节点是否睡眠
          */

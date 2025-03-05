@@ -130,6 +130,8 @@ export class ParserTemplate {
         this.refs[refKey] = this.refs[refKey] || [];
 
         this.refs[refKey].push(node);
+
+        node.ref = refKey;
     }
 
     /**
