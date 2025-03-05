@@ -29,6 +29,8 @@ const OBJECTPROXY_DEPLEVE_ID = Symbol.for("__JOKER_OBJECTPROXY_DEPLEVE_ID__");
  */
 function checkEnableProxy(data: any): boolean {
     return (
+        data !== undefined &&
+        data !== null &&
         isObject(data) &&
         data instanceof Window === false &&
         data instanceof Watcher === false &&
@@ -192,10 +194,15 @@ function proxyData<T extends object | Set<any>>(data: T): T {
     //对所有可被劫持的属性进行深度遍历劫持
     for (let key in data) {
         let itemData = data[key];
-        //可被代理 && 没有代理
-        if (checkEnableProxy(itemData) && !getProxyDep(itemData)) {
-            //@ts-ignore
-            result[key] = proxyData(data[key]);
+        try {
+            //可被代理 && 没有代理
+            if (checkEnableProxy(itemData) && !getProxyDep(itemData)) {
+                //@ts-ignore
+                result[key] = proxyData(data[key]);
+            }
+        } catch (e: any) {
+            logger.warn("数据劫持", "深度数据劫持出现异常" + e.message);
+            console.log(data, key, itemData);
         }
     }
     resetData = false;
