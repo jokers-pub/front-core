@@ -826,35 +826,31 @@ function toMs(s: string): number {
     return Number(s.slice(0, -1).replace(",", ".")) * 1000;
 }
 
-function getNodePrevInstallPosition(node: VNode.Node): VNode.Node | undefined {
+function getNodePrevInstallPosition(node: VNode.Node, notSearchParent?: boolean): VNode.Node | undefined {
     let prev = node.prev;
     //平级找
     while (prev) {
-        if (
-            prev instanceof VNode.Element ||
-            prev instanceof VNode.Comment ||
-            prev instanceof VNode.Text ||
-            prev instanceof VNode.Component ||
-            prev instanceof VNode.Element
-        ) {
+        //只要不是 内嵌子集的就向后输出
+        if (prev instanceof VNode.ListItem === false) {
             return prev;
         }
         prev = prev.prev;
     }
 
-    //往上找
-    let parent = node.parent;
+    if (!notSearchParent) {
+        //往上找
+        let parent = node.parent;
 
-    while (parent) {
-        if (parent instanceof VNode.Element) return;
+        while (parent) {
+            if (parent instanceof VNode.Element) return;
 
-        let result = getNodePrevInstallPosition(parent);
+            let result = getNodePrevInstallPosition(parent, true);
 
-        if (result) return result;
+            if (result) return result;
 
-        parent = parent.parent;
+            parent = parent.parent;
+        }
     }
-
     return;
 }
 
