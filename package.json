@@ -42,7 +42,7 @@
     },
     "devDependencies": {
         "@joker.front/library-cli": "^1.2.14",
-        "@joker.front/sfc": "^1.1.15",
+        "@joker.front/sfc": "^1.1.17",
         "@joker.front/shared": "^1.5.30",
         "@types/jest": "^27.5.2",
         "@types/node": "^20.5.7",

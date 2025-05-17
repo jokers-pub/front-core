@@ -16,8 +16,8 @@ importers:
         specifier: ^1.2.14
         version: 1.2.14(eslint@8.38.0)
       '@joker.front/sfc':
-        specifier: ^1.1.15
-        version: 1.1.15
+        specifier: ^1.1.17
+        version: 1.1.17
       '@joker.front/shared':
         specifier: ^1.5.30
         version: 1.5.30
@@ -348,8 +348,8 @@ packages:
     resolution: {integrity: sha512-fwd9omXyzApB3m4TNKuIUptxcNv11Zcx2l+RpROQwHMyyvndfofRbx/N5iUFY652XFfmz+o/qhrrpyekxUVAXA==}
     hasBin: true
 
-  '@joker.front/sfc@1.1.15':
-    resolution: {integrity: sha512-w1JF/pn5TlnMOCOhR7ahArD21lTpzJfYz0xcYB3cuUlnD9KhG6pgeI0/rv+5pydpWLSA8VJuI8kTqtVsS0fqQA==}
+  '@joker.front/sfc@1.1.17':
+    resolution: {integrity: sha512-7sorJeOYTQAP+kdD4K/UHPvejGUOb2yI7i88a33PSlaUlqrrTnR/zqSeDjokjzRSEh+zKJu1VWFCv/Z3kd3eiw==}
 
   '@joker.front/shared@1.5.30':
     resolution: {integrity: sha512-P2zCwyMViBjIFXl2J8EobqmouH6IUciuI1SusYvV5JRMKlAddjEK1PY17PpN5WqyKU6zTUCApDY/tNcKKyqdkw==}
@@ -3388,7 +3388,7 @@ snapshots:
       - eslint
       - supports-color
 
-  '@joker.front/sfc@1.1.15':
+  '@joker.front/sfc@1.1.17':
     dependencies:
       htmlparser2: 8.0.2
       source-map: 0.7.4
