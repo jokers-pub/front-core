@@ -36,6 +36,10 @@
     "dependencies": {
         "@joker.front/ast": "^1.3.30"
     },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jokers-pub/front-core.git"
+    },
     "devDependencies": {
         "@joker.front/library-cli": "^1.2.14",
         "@joker.front/sfc": "^1.1.17",
