@@ -203,7 +203,7 @@ export namespace VNode {
      */
     export class Html extends Node {
         public static = true;
-
+        public scopedId?: string;
         constructor(public html: string, parent: Node, public notShadow?: boolean) {
             super(parent);
         }

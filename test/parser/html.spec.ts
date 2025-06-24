@@ -1,6 +1,7 @@
-import { Component } from "../../src/component";
+import { Component, SCOPE_ID } from "../../src/component";
 import { mountAst } from "../utils";
 class SourceView extends Component {
+    [SCOPE_ID] = "xxxxx";
     model = {
         content: "哈哈哈哈哈哈<i></i>"
     };
@@ -25,10 +26,14 @@ describe("html", () => {
         let root = mountAst(`@Html(model.content,true)`, view);
 
         //开启沙箱 无法判断内部文本
-        expect(root.innerHTML).toBe("<joker-html-container>哈哈哈哈哈哈<i></i></joker-html-container>");
+        expect(root.innerHTML).toBe(
+            '<joker-html-container data-scoped-xxxxx="">哈哈哈哈哈哈<i data-scoped-xxxxx=""></i></joker-html-container>'
+        );
 
         view.model.content = "<div>1</div>";
 
-        expect(root.innerHTML).toBe("<joker-html-container><div>1</div></joker-html-container>");
+        expect(root.innerHTML).toBe(
+            '<joker-html-container data-scoped-xxxxx=""><div data-scoped-xxxxx="">1</div></joker-html-container>'
+        );
     });
 });

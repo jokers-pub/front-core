@@ -163,6 +163,8 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
 
             if (this.node instanceof VNode.Element && this.ob[SCOPE_ID]) {
                 this.node.attributes["data-scoped-" + this.ob[SCOPE_ID]] = undefined;
+            } else if (this.node instanceof VNode.Html && this.ob[SCOPE_ID]) {
+                this.node.scopedId = this.ob[SCOPE_ID];
             }
 
             this.ext.render?.appendNode(this.node, index);

@@ -165,6 +165,11 @@ export namespace Render {
             } else if (node instanceof VNode.Html) {
                 if (node.notShadow) {
                     node.output.innerHTML = node.html;
+
+                    if (node.scopedId) {
+                        // 调用函数处理容器元素的所有子元素
+                        addDataScopedAttribute(node.output, node.scopedId);
+                    }
                 } else {
                     node.output.root.innerHTML = node.html;
                 }
@@ -334,12 +339,19 @@ export namespace Render {
                 }
             } else if (node instanceof VNode.Html) {
                 if (node.notShadow) {
-                    let conatiner = document.createElement("joker-html-container");
+                    let container = document.createElement("joker-html-container");
                     //@ts-ignore
-                    conatiner.JOKER_NODE = node;
-                    conatiner.innerHTML = node.html;
+                    container.JOKER_NODE = node;
+                    container.innerHTML = node.html;
 
-                    node.output = conatiner;
+                    if (node.scopedId) {
+                        // 为容器元素添加 data-scoped 属性
+                        container.setAttribute("data-scoped-" + node.scopedId, "");
+
+                        // 调用函数处理容器元素的所有子元素
+                        addDataScopedAttribute(container, node.scopedId);
+                    }
+                    node.output = container;
                 } else {
                     let conatiner = document.createElement("joker-html-shadow") as HtmlContainerWebComponent;
                     //@ts-ignore
@@ -867,3 +879,21 @@ class HtmlContainerWebComponent extends HTMLElement {
 
 // 注册自定义元素
 !customElements.get("joker-html-shadow") && customElements.define("joker-html-shadow", HtmlContainerWebComponent);
+
+// 递归为所有元素节点添加 data-scoped 属性
+function addDataScopedAttribute(element: HTMLElement, scoped: string) {
+    // 使用 element.childNodes 获取包含文本节点的所有子节点
+    const childNodes = element.childNodes;
+
+    for (let i = 0; i < childNodes.length; i++) {
+        const node = childNodes[i];
+
+        // 只处理元素节点 (Node.ELEMENT_NODE === 1)
+        if (node.nodeType === 1) {
+            const childElement = node as HTMLElement;
+            childElement.setAttribute("data-scoped-" + scoped, "");
+            // 递归处理子元素
+            addDataScopedAttribute(childElement, scoped);
+        }
+    }
+}
