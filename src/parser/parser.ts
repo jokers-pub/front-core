@@ -13,12 +13,14 @@ const LOGTAG = "Render Core";
  * @param express 表达式字符串（依赖AST转换，自带参数文根）
  * @returns
  */
-function createExpress(express: string): Function {
+function createExpress(express: string, customLog?: () => string | void): Function {
     try {
         return new Function(EXPRESSHANDLERTAG, GLOBAL_TAG, `return ${express};`);
-    } catch {
+    } catch (e: any) {
         throw new Error(
-            `An unknown error occurred while creating the expression execution method. The expression is: ${express}`
+            `An unknown error occurred while creating the expression execution method. The expression is:${
+                e.message
+            } \n${customLog?.() || express}`
         );
     }
 }
@@ -201,7 +203,7 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      */
     protected runExpress(express: string, ob: any, customLog: () => string | void): any {
         try {
-            return createExpress(express).call(ob, ob, __GLONAL_FUNTIONS__);
+            return createExpress(express, customLog).call(ob, ob, __GLONAL_FUNTIONS__);
         } catch (e: any) {
             logger.error(LOGTAG, `Expression error:${e.message}\n` + (customLog?.() || express), {
                 ob
@@ -226,7 +228,7 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
         customLog?: () => string | void
     ) {
         if (this.isDestroy) return;
-        let expressFunction = typeof express === "string" ? createExpress(express) : express;
+        let expressFunction = typeof express === "string" ? createExpress(express, customLog) : express;
 
         let watcher = new Watcher(
             () => {

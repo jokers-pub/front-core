@@ -13,7 +13,7 @@ function createExpress(letKey: string, keyVal: string, condition: string): Funct
         return new Function(EXPRESSHANDLERTAG, `${EXPRESSHANDLERTAG}.${letKey}=${keyVal}; return ${condition};`);
     } catch {
         throw new Error(
-            `For循环命令，表达式运行依赖采集出现未知错误，其中letKey:${letKey},keyVal:${keyVal},condition:${condition}`
+            `Dependency collection for the For loop command expression execution encountered an unknown error. Details: letKey: ${letKey}, keyVal: ${keyVal}, condition: ${condition}`
         );
     }
 }
