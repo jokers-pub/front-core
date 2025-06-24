@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@joker.front/ast':
-        specifier: ^1.3.24
-        version: 1.3.24
+        specifier: ^1.3.26
+        version: 1.3.26
     devDependencies:
       '@joker.front/library-cli':
         specifier: ^1.2.14
@@ -341,8 +341,8 @@ packages:
     resolution: {integrity: sha512-qbu7kN6czmVRc3xWFQcAN03RAUamgppVUdXrvl1Wr3jlNF93o9mJbGcDWrwGB6ht44u7efB1qCFgVQmca24Uog==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
 
-  '@joker.front/ast@1.3.24':
-    resolution: {integrity: sha512-IQAsXwc54CG8vciir6glNrE4HJYYLIp8nvU3QfKZQD6Nw/8WGfoqv95qD/eYOGCfN2fpvqpeljPPgGnk+Iqz/A==}
+  '@joker.front/ast@1.3.26':
+    resolution: {integrity: sha512-okyTvKvh0L1Dws+eUCVLw64qYt/tV/q9A2yRLldfkubm9BYyvnUZPBDG2k7zUazxnHy9BNmcNcwMfVS4GS/How==}
 
   '@joker.front/library-cli@1.2.14':
     resolution: {integrity: sha512-fwd9omXyzApB3m4TNKuIUptxcNv11Zcx2l+RpROQwHMyyvndfofRbx/N5iUFY652XFfmz+o/qhrrpyekxUVAXA==}
@@ -3366,7 +3366,7 @@ snapshots:
       '@types/yargs': 17.0.24
       chalk: 4.1.2
 
-  '@joker.front/ast@1.3.24': {}
+  '@joker.front/ast@1.3.26': {}
 
   '@joker.front/library-cli@1.2.14(eslint@8.38.0)':
     dependencies:
