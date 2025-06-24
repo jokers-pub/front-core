@@ -23,6 +23,7 @@ describe("html", () => {
     test("parser-html", () => {
         let view = new SourceView();
 
+        //测试 scoped
         let root = mountAst(`@Html(model.content,true)`, view);
 
         //开启沙箱 无法判断内部文本
