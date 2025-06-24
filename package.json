@@ -34,7 +34,7 @@
         "front"
     ],
     "dependencies": {
-        "@joker.front/ast": "^1.3.30"
+        "@joker.front/ast": "^1.3.31"
     },
     "repository": {
         "type": "git",
