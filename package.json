@@ -29,6 +29,10 @@
     "author": "Zohar",
     "license": "MIT",
     "homepage": "https://front.jokers.pub",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jokers-pub/front-core.git"
+    },
     "keywords": [
         "joker",
         "front"
