@@ -18,9 +18,9 @@ function createExpress(express: string, customLog?: () => string | void): Functi
         return new Function(EXPRESSHANDLERTAG, GLOBAL_TAG, `return ${express};`);
     } catch (e: any) {
         throw new Error(
-            `An unknown error occurred while creating the expression execution method. The expression is:${
-                e.message
-            } \n${customLog?.() || express}`
+            `An unknown error occurred while creating the expression execution method. \nmessage: ${e.message} \n${
+                customLog?.() || express
+            }`
         );
     }
 }
