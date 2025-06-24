@@ -3,7 +3,7 @@ import { isEmptyStr, logger } from "@joker.front/shared";
 import { IParser } from "./parser";
 import { VNode } from "./vnode";
 
-const LOGTAG = "Element解析";
+const LOGTAG = "Element";
 
 export class ParserElement extends IParser<AST.Element, VNode.Element> {
     public parser() {
@@ -22,7 +22,7 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
         for (let attr of this.ast.attributes) {
             if (attr.name === "ref") {
                 if (isEmptyStr(attr.value)) {
-                    logger.warn(LOGTAG, "元素的ref值不可以为空");
+                    logger.warn(LOGTAG, "The 'ref' value of the element cannot be empty");
                     continue;
                 }
 
@@ -43,9 +43,19 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                     this.notifyNodeWatcher("update", attr.name);
                 };
 
-                let watcherVal = this.runExpressWithWatcher(attr.express, this.ob, (newVal) => {
-                    change(newVal);
-                });
+                let watcherVal = this.runExpressWithWatcher(
+                    attr.express,
+                    this.ob,
+                    (newVal) => {
+                        change(newVal);
+                    },
+                    false,
+                    () => {
+                        if (attr.value) {
+                            return `${attr.value} from <${this.ast.tagName} ${attr.name}="${attr.value}" ... />  `;
+                        }
+                    }
+                );
 
                 this.node!.attributes[attr.name] = this.transformAttrVal(watcherVal);
             } else {
@@ -73,7 +83,15 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
 
                             if (event.functionParam) {
                                 //事件触发时，主动获取，不需要做数据劫持监听
-                                eventParams = this.runExpress(`[${event.functionParam}]`, this.ob);
+                                eventParams = this.runExpress(`[${event.functionParam}]`, this.ob, () => {
+                                    if (event._code) {
+                                        let modifiers = event.modifiers?.join(".");
+
+                                        return `${event._code} from <${this.ast.tagName} @${event.name}${
+                                            modifiers ? "." + modifiers : ""
+                                        }="${event._code}" ... />  `;
+                                    }
+                                });
                             }
 
                             if (eventCallBack) {
@@ -84,7 +102,8 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                 ]);
             } else {
                 throw new Error(
-                    `${this.ast.tagName}元素中${event.name}事件所指定的回调（${event.functionName}）方法未找到，请检查`
+                    `The callback method (${event.functionName}) specified for the ${event.name} event ` +
+                        `in the ${this.ast.tagName} element was not found. Please check.`
                 );
             }
         }

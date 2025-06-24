@@ -6,8 +6,12 @@ import { VNode } from "../vnode";
 export class ParserCode extends IParser<AST.PropertyOrFunctionCommand, VNode.Text | VNode.Html> {
     public parser(): void {
         if (isEmptyStr(this.ast.cmdName)) {
-            logger.error("模板指令", "解析AST转换VNode时发生错误，未找到指令名称", this.ast);
-            throw new Error("解析AST转换VNode时发生错误，未找到指令名称");
+            logger.error(
+                "Template Directive",
+                "Error occurred while converting AST to VNode: Directive name not found",
+                this.ast
+            );
+            throw new Error("Error converting AST to VNode: Directive name not found");
         }
 
         let express: string | undefined = undefined;
@@ -21,9 +25,17 @@ export class ParserCode extends IParser<AST.PropertyOrFunctionCommand, VNode.Tex
         }
 
         if (express) {
-            let data = this.runExpressWithWatcher(`[${express}]`, this.ob, (newVal) => {
-                this.changeValue(newVal?.[0]);
-            });
+            let data = this.runExpressWithWatcher(
+                `[${express}]`,
+                this.ob,
+                (newVal) => {
+                    this.changeValue(newVal?.[0]);
+                },
+                false,
+                () => {
+                    return this.ast._code;
+                }
+            );
 
             data ||= [];
 
@@ -37,7 +49,7 @@ export class ParserCode extends IParser<AST.PropertyOrFunctionCommand, VNode.Tex
             return;
         }
 
-        throw new Error(`未找到命令：${this.ast.cmdName}`);
+        throw new Error("Command not found: " + this.ast.cmdName);
     }
 
     changeValue(val: any) {

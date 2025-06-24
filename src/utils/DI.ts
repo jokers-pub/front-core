@@ -1,33 +1,47 @@
 type Constructor<T = any> = new (...args: any[]) => T;
 
 /**
- * IOC依赖注入容器
+ * IOC Dependency Injection Container
  *
- * IOC依赖注入适用场景：
- * 内部已规划的API、Interface，需要在外部对其进行逻辑注入的场景
- * 区分于plugin，plugin是根据整体声明周期做的切面注入
+ * Applicable scenarios for IOC dependency injection:
+ * APIs and Interfaces that are internally planned but need external logic injection.
+ * Different from plugins, which are aspect injections based on the overall lifecycle.
  */
 export namespace IContainer {
-    let binds: Map<symbol | string, Constructor> = new Map();
+    let bindings: Map<symbol | string, Constructor> = new Map();
 
+    /**
+     * Bind a tag identifier to a constructor
+     * @param tagId Unique identifier for the binding
+     * @returns Object with 'to' method to specify the target constructor
+     */
     export function bind<T>(tagId: symbol | string) {
         return {
             to: (target: Constructor<T>) => {
-                if (binds.has(tagId)) {
-                    throw new Error(`TagId:${tagId.toString()}已注入实现类，请勿重复注入。`);
+                if (bindings.has(tagId)) {
+                    throw new Error(
+                        `TagId:${tagId.toString()} already has an implementation bound. Do not bind again.`
+                    );
                 }
 
-                binds.set(tagId, target);
+                bindings.set(tagId, target);
             }
         };
     }
 
+    /**
+     * Resolve a dependency by tag identifier
+     * @param tagId Unique identifier for the binding
+     * @param params Parameters to pass to the constructor
+     * @returns New instance of the bound constructor, or undefined if not found
+     */
     export function get<T>(tagId: symbol | string, ...params: any[]): T | undefined {
-        let target = binds.get(tagId);
+        const target = bindings.get(tagId);
 
         if (target) {
             return new target(...params);
         }
-        return;
+
+        return undefined;
     }
 }

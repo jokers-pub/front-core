@@ -7,7 +7,7 @@ import { VNode } from "./parser/vnode";
 import { PropType, getPropValue } from "./props";
 import { isGetterProperty } from "./utils";
 
-const LOGTAG = "组件";
+const LOGTAG = "Component";
 const PROPS_DATA_KEY = Symbol.for("JOKER_PROPS_DATA_KEY");
 const PROPS_DATA_PROXY = Symbol.for("JOKER_PROPS_DATA_PROXY");
 const PRIVATE_WATCHERS = Symbol.for("JOKER_PRIVATE_WATCHERS");
@@ -60,44 +60,44 @@ let componentFunctionPropertyNames = [
 ];
 
 /**
- * Joker组件
+ * Joker component
  */
 export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     static [JOKER_COMPONENT_TAG] = true;
 
     /**
-     * scopeId 配合css：Scoped
+     * scopeId for css scoping
      */
     public [SCOPE_ID]?: string;
 
     /**
-     * 可观察数据（具备劫持观察能力）
+     * Observable data (with hijacking observation capability)
      */
     public model: DefaultKeyVal = {};
 
     /**
-     * 渲染模板
+     * Render template
      */
     public template?: TemplateType;
 
     /**
-     * 挂载根
+     * Mount root
      */
     public $root: any;
 
     /**
-     * 是否已睡眠
+     * Whether it is slept
      */
     public isSleeped: boolean = false;
     /**
-     * 可用的声明组件
+     * Available declared components
      */
     public components: Record<string, ComponentConstructor | ImportComponentConstructor> = {};
 
     /**
-     * props辅助约束
-     * @example { name:"默认值",age:Number }
-     * 可以配置默认值，也可以配置为约束，类型参考PropType
+     * Props auxiliary constraints
+     * @example { name:"default value", age:Number }
+     * Can configure default values or constraints, type reference PropType
      */
     public propsOption?: Partial<Record<keyof T, PropType | any>>;
 
@@ -113,12 +113,12 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
     private [IS_DESTROY] = false;
 
-    //方法转换标记
+    // Method conversion flag
     private [TRANSFORM_FUNCTION_FLAG] = false;
     /**
-     * @param propData prop参数
-     * @param sections 渲染部分区域
-     * @param isKeepAlive 是否要保持存活，启用时再destroy时只会销毁UI部分，不会销毁数据，直到使用destroy(true)才会销毁
+     * @param propData prop parameters
+     * @param sections Render partial area
+     * @param isKeepAlive Whether to keep alive, when enabled, only the UI part will be destroyed during destroy, and the data will not be destroyed until destroy(true) is used
      */
     constructor(
         propData?: T,
@@ -129,7 +129,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 主动声明接受的参数
+     * Actively declare accepted parameters
      * @returns
      */
     public get props(): Readonly<T> {
@@ -141,7 +141,9 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
                     return getPropValue(self[PROPS_DATA_KEY], p, self.propsOption);
                 },
                 set() {
-                    throw new Error("props 参数不允许变更，只允许单向数据传递");
+                    throw new Error(
+                        "props parameters are not allowed to be changed, only one-way data transfer is allowed"
+                    );
                 }
             });
         }
@@ -150,7 +152,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 挂载
+     * Mount
      * @param root
      */
     public $mount(root: any | VNode.Component): this {
@@ -161,12 +163,12 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
                 while (currentObj !== null && currentObj !== Object.prototype) {
                     Object.getOwnPropertyNames(currentObj).forEach((property) => {
                         if (
-                            //排除构造函数以及内部函数
+                            // Exclude constructor and internal functions
                             componentFunctionPropertyNames.includes(property) === false &&
-                            //排除get 属性
+                            // Exclude get properties
                             !isGetterProperty(currentObj, property) &&
                             typeof currentObj[property] === "function" &&
-                            //排除class
+                            // Exclude class
                             !currentObj[property].prototype?.hasOwnProperty("constructor")
                         ) {
                             childMethods.push(property);
@@ -177,7 +179,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
                 return childMethods;
             };
 
-            //更改function this 指针
+            // Change function this pointer
             for (let name of getAllChildFuncProperties()) {
                 this[name as keyof this] = (this[name as keyof this] as Function).bind(this);
             }
@@ -186,17 +188,18 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         this.$root = root;
 
-        //从睡眠中醒来
+        // Wake up from sleep
         if (this.isKeepAlive && this.isSleeped) {
             this.isSleeped = false;
 
             if (this[PARSER_TEMPLATE_TARGET] && this.$root) {
                 this[PARSER_TEMPLATE_TARGET].mount(this.$root);
             } else {
-                logger.error(LOGTAG, `当前组件在唤醒时，发现渲染处理程序已被销毁，无法进行唤醒操作`, [
-                    this,
-                    this.$root
-                ]);
+                logger.error(
+                    LOGTAG,
+                    "When attempting to wake up the current component, it was found that the rendering handler has been destroyed. The wake-up operation cannot proceed.",
+                    [this, this.$root]
+                );
                 return this;
             }
 
@@ -217,7 +220,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         let next = async () => {
             this.$trigger("created");
 
-            //有模板则执行render，否则不处理
+            // If there is a template, execute render, otherwise do not process
             this.template && this.$render();
 
             await this.$nextUpdatedRender();
@@ -244,7 +247,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     public $nextUpdatedRender(callBack?: Function) {
         if (this[IS_DESTROY]) return;
 
-        //收集此刻异步渲染（含子集）
+        // Collect asynchronous renders at this moment (including subsets)
         let promiseQueue: Array<Promise<any>> = [...(this[PARSER_TEMPLATE_TARGET]?.promiseQueue || [])];
         let childrens: any = this.$rootVNode?.find((n) => n instanceof VNode.Component);
         childrens?.forEach((n: any) => {
@@ -262,7 +265,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 节点动画，仅支持 element及组件节点
+     * Node animation, only supports element and component nodes
      */
     public $nodeTransition(
         nodeOrRef: string | VNode.Node,
@@ -277,7 +280,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             if (vnode) {
                 nodeOrRef = vnode;
             } else {
-                logger.error(LOGTAG, `执行节点动画是找不到ref=${nodeOrRef}的节点`);
+                logger.error(LOGTAG, `Node with ref=${nodeOrRef} not found when executing node animation`);
                 return;
             }
         }
@@ -285,7 +288,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 销毁
+     * Destroy
      */
     public $destroy(force?: boolean) {
         if (!force && this.isKeepAlive) {
@@ -303,7 +306,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         this[IS_DESTROY] = true;
 
-        //#region  清除组件内监听和模板编译内的监听
+        //#region Clear listeners within the component and listeners within template compilation
         for (let watcher of this[PRIVATE_WATCHERS]) {
             watcher.destroy();
         }
@@ -342,31 +345,31 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * VNode ref索引集
+     * VNode ref index set
      */
     public get $refs(): Readonly<Record<string, Array<VNode.Node>>> {
         return this[PARSER_TEMPLATE_TARGET]?.refs || {};
     }
 
     /**
-     * 根据ref获取单个VNode
+     * Get a single VNode by ref
      */
     public $getRef<T extends VNode.Node = VNode.Element & VNode.Component>(ref: string): T | undefined {
         return this.$refs[ref]?.[0] as T;
     }
 
     /**
-     * 获取相同ref的VNode集合
+     * Get the VNode collection with the same ref
      */
     public $getRefs<T extends VNode.Node = VNode.Element & VNode.Component>(ref: string): Array<T> | undefined {
         return this.$refs[ref] as T[];
     }
 
     /**
-     * 单向同步prop值，并监听变更后重新同步
-     * @param propKey 需要观察同步的props key
-     * @param modelKey 要赋值的model key，不传案prop key 进行赋值
-     * @param convertVal 值转换方法
+     * Unidirectionally synchronize prop values and listen for changes to resynchronize
+     * @param propKey The props key to observe and synchronize
+     * @param modelKey The model key to assign, if not passed, assign by prop key
+     * @param convertVal Value conversion method
      */
     public $syncProp(propKey: keyof T): void;
     public $syncProp(propKey: keyof T, modelKey: string): void;
@@ -382,7 +385,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         convertVal ??= (val: any) => {
             return val;
         };
-        //先做一次同步再去观察
+        // Synchronize first and then observe
         this.model[modelKey] = convertVal(this.props[propKey]);
 
         this.$watch(
@@ -394,17 +397,17 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 根节点（虚拟DOM）
+     * Root node (virtual DOM)
      */
     public get $rootVNode(): Readonly<VNode.Root> | undefined {
         return this[PARSER_TEMPLATE_TARGET]?.root;
     }
 
     /**
-     * 添加节点变更监听
-     * @param ref  ref标记
+     * Add node change listening
+     * @param ref ref mark
      * @param callBack
-     * @returns 销毁方法
+     * @returns Destroy method
      */
     public $watchNode(
         ref: string,
@@ -417,16 +420,16 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
                 this[PARSER_TEMPLATE_TARGET]?.removeNodeWatcher(ref, callBack);
             };
         } else {
-            logger.warn(LOGTAG, `该组件还未挂载，不可以进行节点观察监听`);
+            logger.warn(LOGTAG, "Component is not yet mounted. Node observation and monitoring cannot be performed.");
         }
     }
 
     /**
-     * 观察值变更
+     * Observe value changes
      * @param express
      * @param callBack
-     * @param forceCallBack 即使值相同也要强制触发callback
-     * @returns [wathcer值， 销毁watcher]
+     * @param forceCallBack Force trigger callback even if the value is the same
+     * @returns [wathcer value, destroy watcher]
      */
     public $watch(
         express: () => any,
@@ -436,7 +439,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         let watcher = new Watcher(
             () => {
                 if (this[IS_DESTROY]) {
-                    //集中清理
+                    // Centralized cleaning
                     for (let watcher of this[PRIVATE_WATCHERS]) {
                         watcher.destroy();
                     }
@@ -464,7 +467,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 事件注册
+     * Event registration
      * @param eventName
      * @param callBack
      */
@@ -482,7 +485,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 事件卸载
+     * Event unload
      * @param eventName
      * @param callBack
      */
@@ -498,13 +501,13 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         }
     }
     /**
-     * 触发事件
-     * @param eventName 事件名称
-     * @param param 参数
+     * Trigger event
+     * @param eventName Event name
+     * @param param Parameters
      * @param targetEvent event
      */
     public $trigger(eventName: string, param?: any, targetEvent?: VNode.Event<any>) {
-        //销毁节点不做任何事件响应
+        // Destroyed nodes do not respond to any events
         if (!this.$root) {
             return;
         }
@@ -517,13 +520,13 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             target: targetEvent?.target ?? this.$rootVNode,
             event: targetEvent?.event
         };
-        //虚拟节点的事件传播，不是通过on进行传递，需要容器介质，保证不随着组件销毁
+        // Event propagation of virtual nodes is not passed through on, but requires a container medium to ensure that it is not destroyed with the component
         if (this.$rootVNode && this.$rootVNode.parent && this.$rootVNode.parent instanceof VNode.Component) {
             if (this[PARSER_TEMPLATE_TARGET]?.render.triggerEvent(this.$rootVNode.parent, eventName, e) === false)
                 return;
         }
 
-        //实例事件响应
+        // Instance event response
         let callBacks = this[EVENT_DATA_KEY].get(eventName);
         if (callBacks?.size) {
             [...callBacks].forEach((m) => {
@@ -531,7 +534,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             });
         }
 
-        //全局补充
+        // Global supplement
         let globalCallBacks = this[EVENT_DATA_KEY].get("*");
         if (globalCallBacks?.size) {
             [...globalCallBacks].forEach((m) => {
@@ -541,13 +544,13 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 主动渲染（仅渲染，一般适用于模板区域的热更新使用/或动态装载等复杂场景）
-     * @param newTemplate 可指定新的模板，否则按照原模板
-     * @param keepalive 渲染新模板时，是否要保留之前的存活组件（高级用法）
+     * Active rendering (only rendering, generally suitable for complex scenarios such as hot updates of template areas/dynamic loading, etc.)
+     * @param newTemplate Can specify a new template, otherwise use the original template
+     * @param keepalive When rendering a new template, whether to retain the previous live components (advanced usage)
      * @returns
      */
     public $render(newTemplate?: TemplateType, keepalive?: boolean) {
-        //之所以 将template放在前置，而不是判断root之后，是为了keepalive组件的热更新
+        // The reason for placing the template in the front instead of after judging the root is for hot updates of keepalive components
         newTemplate ??= this.template;
         if (typeof newTemplate === "function") {
             this.template = newTemplate(RENDER_HANDLER);
@@ -556,11 +559,11 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         }
 
         if (!this.$root) {
-            //未挂在/已销毁/已压栈，不做rerender
+            // Do not rerender if not mounted/destroyed/pushed onto the stack
             return;
         }
 
-        //执行一次render，则初始化一次template
+        // Execute a render, then initialize a template
         this.template ??= [];
 
         this[PARSER_TEMPLATE_TARGET]?.reSetAsts(this.template, keepalive);
@@ -575,44 +578,44 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     }
 
     /**
-     * 生命周期函数（完成初始化）
+     * Lifecycle function (initialization completed)
      */
     protected created(): void | Promise<void> {}
 
     /**
-     * 生命周期函数（完成挂载）
+     * Lifecycle function (mounting completed)
      */
     protected mounted(): void | Promise<void> {}
 
     /**
-     * 生命周期函数（销毁前）
+     * Lifecycle function (before destruction)
      */
     protected beforeDestroy() {}
 
     /**
-     * 睡眠时，在启用keepalive属性时才会触发该周期
+     * When sleeping, this cycle is only triggered when the keepalive attribute is enabled
      */
     protected sleeped() {}
 
     /**
-     * 唤醒时，在启用keepalive属性时才会触发该周期
+     * When waking up, this cycle is only triggered when the keepalive attribute is enabled
      */
     protected wakeup() {}
 
     /**
-     * 生命周期函数（销毁后）
+     * Lifecycle function (after destruction)
      */
     protected destroyed() {}
 }
 
-//#region 全局组件注册
-//全局组件注册
+//#region Global component registration
+// Global component registration
 const globalComponents: Record<string, ComponentConstructor | ImportComponentConstructor> = {};
 
 /**
- * 注册全局组件
- * @param componentsOrName 组件名/列表
- * @param component 组件
+ * Register global components
+ * @param componentsOrName Component name/list
+ * @param component Component
  */
 export function registerGlobalComponent(
     componentsOrName: Record<string, ComponentConstructor | ImportComponentConstructor> | string,
@@ -630,9 +633,9 @@ export function registerGlobalComponent(
 }
 
 /**
- * 根据注册key获取组件
- * @param name 组件名称
- * @returns 组件
+ * Get component by registration key
+ * @param name Component name
+ * @returns Component
  */
 export function getGlobalComponent(key: string): ComponentConstructor | ImportComponentConstructor | undefined {
     return globalComponents[key];
@@ -640,9 +643,9 @@ export function getGlobalComponent(key: string): ComponentConstructor | ImportCo
 
 //#endregion
 
-//#region 工具方法
+//#region Tool methods
 /**
- * 睡眠事件穿透广播
+ * Sleep event penetration broadcast
  * @param vnode
  */
 function sleepNotify(vnode: VNode.Node) {
@@ -655,7 +658,7 @@ function sleepNotify(vnode: VNode.Node) {
 }
 
 /**
- * 唤醒事件穿透广播
+ * Wake up event penetration broadcast
  * @param vnode
  */
 function weakupNotify(vnode: VNode.Node) {
@@ -668,9 +671,9 @@ function weakupNotify(vnode: VNode.Node) {
 }
 //#endregion
 
-//#region 默认集成组件
+//#region Default integrated components
 /**
- * 动态组件容器
+ * Dynamic component container
  */
 export class ComponentContainer extends Component<{
     [key: string]: any;
@@ -686,13 +689,13 @@ export class ComponentContainer extends Component<{
         this.$watch(
             () => this.props.name,
             async (componentName) => {
-                //先做清理
+                // Clean up first
                 this.$render([], true);
 
-                //等待参数同步
+                // Wait for parameter synchronization
                 await Promise.resolve();
 
-                //当name值变更时，需要等待参数刷新后一同更新
+                // When the name value changes, wait for the parameter to refresh and update together
                 this.$root && this.loadComponent(componentName);
             }
         );
@@ -710,12 +713,12 @@ export class ComponentContainer extends Component<{
 
         if (!this.props.props) {
             Object.keys(this.props).forEach((p) => {
-                //过滤
+                // Filter
                 if (this.filterProps(p) === false) return;
 
                 propsData[p] = this.props[p];
 
-                //单项数据同步
+                // Single-directional data synchronization
                 this.$watch(
                     () => this.props[p],
                     () => {
@@ -729,7 +732,7 @@ export class ComponentContainer extends Component<{
     }
 
     filterProps(p: string) {
-        //过滤
+        // Filter
         if (typeof p !== "string") return false;
 
         let pName = toLowerCase(p);
@@ -770,7 +773,7 @@ export class ComponentContainer extends Component<{
 
             cacheComponent = new component(this.props.props || this.propsVaule, this.$sections, this.isKeepAlive);
 
-            //事件向上穿透广播
+            // Event upward penetration broadcast
             (<Component>cacheComponent).$on("*", (e) => {
                 this.$trigger(e.eventName, e.data, e);
             });
@@ -782,7 +785,7 @@ export class ComponentContainer extends Component<{
                 this.isKeepAlive
             );
         } else {
-            logger.warn("component", `未找到${componentName}的组件`);
+            logger.warn("component", `Component ${componentName} not found`);
         }
     }
 
@@ -808,7 +811,7 @@ export class ComponentContainer extends Component<{
 }
 
 /**
- * 虚拟模板容器，用于进行归组，作为组件配置属性
+ * Virtual template container, used for grouping, as a component configuration attribute
  */
 export class Template extends Component {
     template = function () {

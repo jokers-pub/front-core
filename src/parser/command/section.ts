@@ -25,7 +25,6 @@ export class ParserRenderSection extends IParser<AST.PropertyOrFunctionCommand, 
              *
              * 渲染出来的子集属于组件的子集
              */
-
             if (this.node.section.params) {
                 this.node.ob = Object.create(this.node.section.ob || this.ob);
 
@@ -51,7 +50,7 @@ export class ParserRenderSection extends IParser<AST.PropertyOrFunctionCommand, 
                     let newSectionId = newVal?.[0] || DEFAULT_SECTION_TAG;
 
                     if (typeof newSectionId === "string" && newSectionId !== this.node!.id) {
-                        throw new Error("section id 不可动态变更");
+                        throw new Error("The section ID cannot be dynamically changed");
                     }
 
                     this.node!.params = newVal.slice(1);
@@ -66,7 +65,10 @@ export class ParserRenderSection extends IParser<AST.PropertyOrFunctionCommand, 
                         });
                     }
                 },
-                true
+                true,
+                () => {
+                    return this.ast._code;
+                }
             );
 
             return {

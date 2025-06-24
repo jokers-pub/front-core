@@ -6,20 +6,20 @@ import { IParser } from "./parser";
 
 export const JOKER_VNODE_TAG = Symbol.for("JOKER_VNODE_TAG");
 /**
- * 虚拟DOM
+ * Virtual DOM (VNode)
  *
- * 该控件分类区别于AST，分类是按照实际输出类型作为划分
+ * This control classification differs from AST, as it is divided based on the actual output type.
  */
 export namespace VNode {
     export const PARSERKEY = Symbol.for("JOKER_PARSER_KEY");
 
     /**
-     * VNode 基类
+     * Base class for VNode
      */
     export class Node {
         [JOKER_VNODE_TAG] = true;
         /**
-         * 是否是静态节点，非动态节点。例如：element、text、comment等
+         * Whether it is a static node (non-dynamic), such as element, text, comment, etc.
          */
         public static?: boolean;
 
@@ -31,14 +31,14 @@ export namespace VNode {
 
         public ref?: string;
         /**
-         * 当前节点是否睡眠
+         * Whether the current node is in sleep state
          */
         public sleep: boolean = false;
 
         constructor(public parent?: Node) {}
 
         /**
-         * 上一个节点
+         * Previous node
          */
         public get prev(): Node | undefined {
             if (this.parent) {
@@ -49,7 +49,7 @@ export namespace VNode {
         }
 
         /**
-         * 下一个节点
+         * Next node
          */
         public get next(): Node | undefined {
             if (this.parent) {
@@ -59,10 +59,10 @@ export namespace VNode {
         }
 
         /**
-         * 匹配第一个符合要求的祖先元素
-         * @param filter 过滤条件 返回true 则返回当前节点
-         * @param shouldBreak 自定义停止条件，若返回true，则不再向上查询
-         * @returns
+         * Find the first ancestor element that matches the filter
+         * @param filter Filter condition: return true to select the current node
+         * @param shouldBreak Custom stop condition: return true to stop searching upwards
+         * @returns The matched ancestor node or undefined
          */
         public closest<T extends VNode.Node = VNode.Element & VNode.Component>(
             filter: (node: VNode.Node) => true | any,
@@ -85,11 +85,11 @@ export namespace VNode {
         }
 
         /**
-         * 返回所有匹配的子元素
-         * @param filter 返回true则记录
-         * @param shouldBreak 自定义停止条件，若返回true，则不再向下查询
-         * @param deepSearch 是否深度查询，默认为false，若为true 匹配成功项也会向下查询
-         * @returns
+         * Find all child elements that match the filter
+         * @param filter Return true to include the node
+         * @param shouldBreak Custom stop condition: return true to stop searching downwards
+         * @param deepSearch Whether to search deeply (default: false). If true, continue searching after matching.
+         * @returns Array of matched nodes
          */
         public find<T extends VNode.Node = VNode.Element & VNode.Component>(
             filter: (node: VNode.Node) => true | any,
@@ -123,9 +123,9 @@ export namespace VNode {
         }
 
         /**
-         * 是否包含
-         * @param filter 返回true则记录，返回false则跳过该元素的子集
-         * @returns
+         * Check if any child node matches the filter
+         * @param filter Return true to include the node, return false to skip its children
+         * @returns True if any child matches, false otherwise
          */
         public contains(filter: (node: VNode.Node) => true | any, childrens?: Array<VNode.Node>): boolean {
             childrens ??= this.childrens;
@@ -148,6 +148,11 @@ export namespace VNode {
             return false;
         }
 
+        /**
+         * Find the first child node that matches the filter
+         * @param filter Return true to select the node
+         * @returns The first matched child node or undefined
+         */
         public first<T extends VNode.Node = VNode.Element & VNode.Component>(
             filter: (node: VNode.Node) => true | any,
             childrens?: Array<VNode.Node>
@@ -175,7 +180,7 @@ export namespace VNode {
     }
 
     /**
-     * 根节点
+     * Root node
      */
     export class Root<T extends IComponent = IComponent & Record<string, any>> extends Node {
         public childrens: Node[] = [];
@@ -188,7 +193,7 @@ export namespace VNode {
     }
 
     /**
-     * 文本类型节点
+     * Text node
      */
     export class Text extends Node {
         public static = true;
@@ -199,7 +204,7 @@ export namespace VNode {
     }
 
     /**
-     * Html节点
+     * HTML node
      */
     export class Html extends Node {
         public static = true;
@@ -210,7 +215,7 @@ export namespace VNode {
     }
 
     /**
-     * 注释节点
+     * Comment node
      */
     export class Comment extends Node {
         public static = true;
@@ -221,7 +226,7 @@ export namespace VNode {
     }
 
     /**
-     * Element节点
+     * Element node
      */
     export class Element extends Node {
         public static = true;
@@ -233,7 +238,7 @@ export namespace VNode {
         public events: Array<[string, { modifiers?: string[]; callBack: EventCallBack }]> = [];
 
         /**
-         * 协助事件存储，用于存储辅助事件，例如outside等事件
+         * Auxiliary event storage for storing assist events like 'outside'
          */
         public _assistEventCache?: Array<[string, (e: any) => void]>;
 
@@ -244,46 +249,46 @@ export namespace VNode {
 
     export type Event<T = undefined, N extends VNode.Node = VNode.Element | VNode.Component | VNode.Root> = {
         /**
-         * 事件名称
+         * Event name
          */
         eventName: string;
         /**
-         * 原生event，对应运行平台
+         * Native event corresponding to the runtime platform
          */
         event?: any;
-        /** 触发事件目标元素 */
+        /** Target element that triggered the event */
         target?: N;
-        /** 阻止默认事件 */
+        /** Prevent default event behavior */
         preventDefault(): void;
-        /** 阻止事件传播 */
+        /** Stop event propagation */
         stopPropagation(): void;
-        /** 参数 */
+        /** Event parameters */
         data: T;
     };
 
     export type EventCallBack<T = any> = (e: Event<T>) => void;
 
     /**
-     * 组件节点
+     * Component node
      */
     export class Component<T extends ComponentClass = ComponentClass<any> & Record<string, any>> extends Node {
-        /** 组件名（template标签名） */
+        /** Component name (template tag name) */
         public name?: string;
 
-        /** 组件实例 */
+        /** Component instance */
         public component!: T;
 
-        /** 事件 */
+        /** Events */
         public events: Array<[string, { modifiers?: string[]; callBack: EventCallBack }]> = [];
 
-        /** 参数 */
+        /** Properties values */
         public propValues: Record<string, any> = {};
 
-        /** 是否保持存活 */
+        /** Whether to keep the component alive */
         public keepalive?: boolean;
 
         /**
-         * 当前组件第一个element vnode
+         * First element VNode of the current component
          */
         public get firstElement() {
             if (this.childrens) {
@@ -304,7 +309,7 @@ export namespace VNode {
             }
         }
 
-        /** 获取根element 节点 包含VNode.Html */
+        /** Get root element nodes (including VNode.Html) */
         public get rootElements() {
             if (this.childrens) {
                 let result: (VNode.Element | VNode.Html)[] = [];
@@ -327,7 +332,7 @@ export namespace VNode {
     }
 
     /**
-     * 条件节点
+     * Condition node
      */
     export class Condition extends Node {
         public result: boolean = false;
@@ -342,14 +347,14 @@ export namespace VNode {
     }
 
     /**
-     * 列表节点,内部包含多组列表项
+     * List node, containing multiple list items
      */
     export class List extends Node {
         public childrens: ListItem[] = [];
     }
 
     /**
-     * 循环列表项
+     * List item for looping
      */
     export class ListItem extends Node {
         public childrens: Node[] = [];
@@ -360,7 +365,7 @@ export namespace VNode {
     }
 
     /**
-     * 插槽节点
+     * Render section node (slot)
      */
     export class RenderSection extends Node {
         public id: string = "unknown";

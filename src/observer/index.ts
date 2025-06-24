@@ -11,21 +11,21 @@ import { Dep, notifyGroupDeps } from "./dep";
 import { Component, JOKER_COMPONENT_TAG, JOKER_VNODE_TAG, ParserTemplate, Watcher } from "../index";
 
 /**
- * 存放劫持对象的Dep的Key
+ * Symbol key for storing the Dep instance of a proxied object
  */
 export const OBJECTPROXY_DEPID = Symbol.for("__JOKER_OBJECT_PROXY_DEP_ID__");
 
 const OBJECTPROXY_DATA_KEY = Symbol.for("__JOKER_OBJECT_PROXY_DATA_KEY__");
 
 /**
- * 针对深度劫持关系时，需要给该对象做一个虚拟劫持的关系Key，方便事件传播
+ * Symbol key for virtual dependency level tracking in deep observation
  */
 const OBJECTPROXY_DEPLEVE_ID = Symbol.for("__JOKER_OBJECTPROXY_DEPLEVE_ID__");
 
 /**
- * 检测是否允许劫持代理
- * @param data
- * @returns
+ * Check if an object can be proxied for observation
+ * @param data Object to check
+ * @returns True if the object can be proxied
  */
 function checkEnableProxy(data: any): boolean {
     try {
@@ -39,7 +39,7 @@ function checkEnableProxy(data: any): boolean {
             data instanceof Component === false &&
             data instanceof ParserTemplate === false &&
             (Array.isArray(data) || isPlainObject(data) || data instanceof Set || data instanceof Map) &&
-            //非冻结
+            // Not frozen
             !Object.isFrozen(data) &&
             !(data instanceof Element) &&
             !(JOKER_VNODE_TAG in data) &&
@@ -51,14 +51,20 @@ function checkEnableProxy(data: any): boolean {
     }
 }
 
+/**
+ * Create a reactive proxy for an object
+ * @param data Object to proxy
+ * @returns Proxied object
+ */
 function proxyData<T extends object | Set<any>>(data: T): T {
     let proxyDepTarget = getProxyDep(data);
 
-    //如果当前数据已经被数据劫持，则直接返回，防止重复劫持监听
+    // Return existing proxy if already observed
     if (proxyDepTarget) {
         return data;
     }
 
+    // Check for existing proxy data key
     if (data && data.hasOwnProperty(OBJECTPROXY_DATA_KEY)) {
         let readiedData = Reflect.get(data, OBJECTPROXY_DATA_KEY);
         if (readiedData) {
@@ -68,7 +74,7 @@ function proxyData<T extends object | Set<any>>(data: T): T {
 
     let dep = new Dep();
 
-    //首次重置值
+    // Flag to skip notifications during initial setup
     let resetData = true;
 
     let result = new Proxy(data, {
@@ -78,7 +84,7 @@ function proxyData<T extends object | Set<any>>(data: T): T {
                     let result = Reflect.get(target, key) as Function;
                     return (value: any) => {
                         if (checkEnableProxy(value)) {
-                            //如果是对象，则对其进行数据依赖采集
+                            // Observe objects before adding
                             value = observer(value);
                         }
 
@@ -91,7 +97,7 @@ function proxyData<T extends object | Set<any>>(data: T): T {
                     let result = Reflect.get(target, key) as Function;
                     return (key: any, value: any) => {
                         if (checkEnableProxy(value)) {
-                            //如果是对象，则对其进行数据依赖采集
+                            // Observe objects before setting
                             value = observer(value);
                         }
 
@@ -118,18 +124,17 @@ function proxyData<T extends object | Set<any>>(data: T): T {
                 }
             }
 
-            // 该属性是为了解决非proxy下的数据重复依赖劫持问题
-            // 如果直接获取proxy中的该属性，可能是全属性遍历，这时返回undefined即可
-            //@ts-ignore
+            // Skip internal data key
             if (key === OBJECTPROXY_DATA_KEY) {
                 return undefined;
             }
 
+            // Return the Dep instance for this proxy
             if (key === OBJECTPROXY_DEPID) {
                 return dep;
             }
 
-            //空索引
+            // Skip virtual dependency key
             if (key === OBJECTPROXY_DEPLEVE_ID) {
                 return undefined;
             }
@@ -140,15 +145,16 @@ function proxyData<T extends object | Set<any>>(data: T): T {
                 return result;
             }
 
+            // Skip non-existent properties (except length/size)
             if (hasProperty(target, key) === false && key !== "length" && key !== "size") {
                 return result;
             }
 
+            // Collect dependency for this property
             dep.depend(key);
 
+            // Track nested object dependencies
             if (checkEnableProxy(result)) {
-                //如果是可劫持对象，并且存在Dep关系，则做深度为1的空key关系
-                //如果不是，并且没有被劫持，理论上不存在，可能由Object原型方法添加，不做考虑
                 getProxyDep(result)?.depend(OBJECTPROXY_DEPLEVE_ID);
             }
 
@@ -160,7 +166,7 @@ function proxyData<T extends object | Set<any>>(data: T): T {
                 return true;
             }
             if (checkEnableProxy(value)) {
-                //如果是对象，则对其进行数据依赖采集
+                // Observe new object values
                 value = observer(value);
             }
             let isNewProperty = hasOwnProperty(target, key) === false;
@@ -169,14 +175,13 @@ function proxyData<T extends object | Set<any>>(data: T): T {
 
             Reflect.set(target, key, value);
 
-            //这里之所以要对长度排除，是因为新增值，会先对索引赋值，索引赋值后才会变更length，这时length已变更，无法进行有效比对
+            // Notify on value changes (or length changes for arrays)
             if (isChange || (key === "length" && Array.isArray(target))) notifyDep(dep, key);
 
-            //数组长度变更，属于数组change，则对该对象做change广播
+            // Notify on array length changes or new object properties
             if (Array.isArray(target)) {
                 key === "length" && notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
             } else if (isNewProperty) {
-                //Object 类型，监听新属性增加
                 notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
             }
 
@@ -185,7 +190,7 @@ function proxyData<T extends object | Set<any>>(data: T): T {
         deleteProperty(target: object, key: string | symbol): boolean {
             Reflect.deleteProperty(target, key);
 
-            //操作成功 && 非数组，删除属性时，要进行广播
+            // Notify on property deletion for non-arrays
             if (Array.isArray(target) === false) {
                 notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
             }
@@ -194,14 +199,14 @@ function proxyData<T extends object | Set<any>>(data: T): T {
         }
     });
 
-    //新增临时挂载，已解决循环数据引用一致性问题
+    // Attach proxy reference to original object
     defineProperty(data, OBJECTPROXY_DATA_KEY, result, false);
 
-    //对所有可被劫持的属性进行深度遍历劫持
+    // Recursively observe existing properties
     for (let key in data) {
         let itemData = data[key];
 
-        //可被代理 && 没有代理
+        // Observe nested objects that aren't already observed
         if (checkEnableProxy(itemData) && !getProxyDep(itemData)) {
             //@ts-ignore
             result[key] = proxyData(data[key]);
@@ -213,26 +218,25 @@ function proxyData<T extends object | Set<any>>(data: T): T {
 }
 
 /**
- * 获取劫持对象的Dep
- * @param data
- * @returns
+ * Get the Dep instance for a proxied object
+ * @param data Object to check
+ * @returns Dep instance or undefined
  */
 function getProxyDep(data: any): Dep | undefined {
-    //@ts-ignore
     if (isObject(data)) {
         return Reflect.get(data, OBJECTPROXY_DEPID);
     }
 }
 
 /**
- * 数据劫持
- * @param data 数据
- * @param clone 是否clone
- * @returns 返回可观察对象
+ * Create a reactive version of an object
+ * @param data Object to observe
+ * @param clone Whether to clone the object before observing
+ * @returns Reactive object
  */
 export function observer<T extends Object>(data: T, clone: boolean = false): T {
     if (checkEnableProxy(data) === false) {
-        throw new Error("当前传入的数据不是正确的数据类型，必须是数组或者对象");
+        throw new Error("The provided data is not of the correct type. It must be an array or an object.");
     }
 
     if (clone) {
@@ -243,32 +247,29 @@ export function observer<T extends Object>(data: T, clone: boolean = false): T {
 }
 
 /**
- * 定义可劫持观察的属性
- *
- * 该方法会污染value深层，如想纯净数据，自行clone
- * @param target
- * @param key
- * @param value
+ * Define a reactive property on an object
+ * @param target Object to define property on
+ * @param key Property key
+ * @param value Property value
  */
 export function defineObserverProperty(target: any, key: string | symbol | number, value: any) {
     let propertyVal: any = value;
 
     if (checkEnableProxy(value)) {
-        //如果是对象，则对其进行数据依赖采集
+        // Observe object values
         propertyVal = observer(value);
     }
 
     let dep = new Dep();
 
     Object.defineProperty(target, key, {
-        //可枚举
+        // Enumerable and configurable
         enumerable: true,
-        //不可再定义
         configurable: true,
         get: () => {
             dep.depend(key);
 
-            //如果是可劫持对象，并且存在Dep关系，则做深度为1的空key关系
+            // Track nested dependencies
             getProxyDep(propertyVal)?.depend(OBJECTPROXY_DEPLEVE_ID);
 
             return propertyVal;
@@ -279,13 +280,13 @@ export function defineObserverProperty(target: any, key: string | symbol | numbe
             }
 
             if (checkEnableProxy(value)) {
-                //如果是对象，则对其进行数据依赖采集
+                // Observe new object values
                 value = observer(value);
-                //不做深层通知
             }
 
             propertyVal = value;
 
+            // Notify dependents
             notifyDep(dep, key);
         }
     });
@@ -293,8 +294,8 @@ export function defineObserverProperty(target: any, key: string | symbol | numbe
 
 const JOKER_SHALLOW_OBSERVER_TAG = Symbol.for("JOKER_SHALLOW_OBSERVER");
 /**
- * 浅劫持监听，不污染数据源，只对根值监听，不对属性监听
- * @returns
+ * Shallow observer that watches only the root value
+ * @returns Shallow observer instance
  */
 export class ShallowObserver<T> {
     [JOKER_SHALLOW_OBSERVER_TAG] = true;
@@ -302,7 +303,7 @@ export class ShallowObserver<T> {
     constructor(private data: T) {}
 
     /**
-     * 是否有变更
+     * Flag indicating if the value has changed
      */
     public isChanged: boolean = false;
 
@@ -322,21 +323,21 @@ export class ShallowObserver<T> {
 }
 
 /**
- * 用于标记是否是组合回复
+ * Flag indicating if combined replies are active
  */
 let isCombined = false;
 /**
- * 组合回复采集队列
+ * Queue for collecting combined dependency updates
  */
 let combinedReplyQueue: Map<Dep, Array<string | symbol | number>> = new Map();
 
 /**
- * 通知dep，通过isCombined执行不同的流程
+ * Notify a dependency, either immediately or queue for combined reply
  */
 function notifyDep(dep: Dep, key: string | symbol | number) {
-    //非合并回复直接回复
+    // Direct notification when not combining
     if (isCombined === false) dep.notify(key);
-    //合并回复，做去重收集
+    // Queue for combined notification
     else {
         let depQueue = combinedReplyQueue.get(dep);
         if (depQueue === undefined) {
@@ -344,17 +345,15 @@ function notifyDep(dep: Dep, key: string | symbol | number) {
             combinedReplyQueue.set(dep, depQueue);
         }
 
-        if (depQueue.includes(key) === false) {
+        if (!depQueue.includes(key)) {
             depQueue.push(key);
         }
     }
 }
 
 /**
- * 组合回复，针对大量值变更，又不想频繁更新DOM，
- * 可通过该方法实现一个作用域内的统一组合回复
- * @param func 处理方法
- * @returns
+ * Combine multiple dependency updates into a single notification
+ * @param func Function containing changes to combine
  */
 export function combinedReply(func: Function) {
     isCombined = true;
@@ -364,19 +363,23 @@ export function combinedReply(func: Function) {
     } catch (e: any) {
         isCombined = false;
         combinedReplyQueue.clear();
-        logger.error("数据劫持", "数据劫持组合回复在做变更采集时，遇到了阻塞错误，不做响应，请检查", e);
+        logger.error(
+            "Data Hijacking",
+            "Encountered a blocking error while collecting changes for data hijacking composite responses. No action will be taken. Please investigate.",
+            e
+        );
         return;
     }
 
     isCombined = false;
 
-    //组合回复
+    // Notify all queued dependencies
     notifyGroupDeps(combinedReplyQueue);
     combinedReplyQueue.clear();
 }
 
 /**
- * 判断一个值是否是已被数据代理劫持
+ * Check if an object is being observed
  */
 export function isObserverData(data: any) {
     return getProxyDep(data) !== undefined;

@@ -1,6 +1,6 @@
 import { escape2Html, isEmptyStr, isObject, logger, remove, removeFilter } from "@joker.front/shared";
 import { VNode } from "./vnode";
-const LOGTAG = "DOM渲染";
+const LOGTAG = "DOM Rendering";
 
 const TAG_PLAINTEXT_ELEMENT = ["script", "style", "textarea", "pre"];
 
@@ -25,71 +25,74 @@ const svgElementTags = [
 
 export namespace Render {
     /**
-     * 注入TagId
+     * Inversion of Control tag ID for rendering
      */
     export const IRENDERIOCTAGID = Symbol.for("JOKER_IRENDERIOC_TAGID");
 
     export let ROOT_CONTAINER: string = "";
     /**
-     * 备注：在渲染时执行appendNode，最终执行一次mount挂载
-     * 不会出现根目录append的场景，因为指令group会优先占位
-     *
-     * append 和 remove方法不会存在 parent的参数，因为一次挂载后
-     * 会存在关系，根据关系直接执行
-     * 上游调用也无需关心parent，特别是在watch周期内
+     * Note: appendNode is executed during rendering, and mount is called once at the end.
+     * There will be no scenario where the root is appended because command groups take precedence.
+     * append and remove methods do not require a parent parameter because after mounting,
+     * the relationship is established, and they are executed directly based on that relationship.
+     * Upstream calls do not need to care about the parent, especially during watch cycles.
      */
     export interface IRender {
         /**
-         * 挂载
-         * @param root 挂载根
-         * 不限制root类型，为后面做多端兼容
+         * Mount the rendering to a root container
+         * @param root Root container (element or component)
+         * Root type is not restricted for multi-platform compatibility
          */
         mount(root: any): void;
 
         /**
-         * 添加节点
-         * @param node NodeInfo
+         * Append a node to the rendering
+         * @param node VNode to append
+         * @param index Optional index for insertion
          */
         appendNode(node: VNode.Node, index?: number): void;
+
         /**
-         * 更新节点
-         * @param node NodeInfo
-         * @param propertyKey 更新属性名称
+         * Update a node's properties
+         * @param node VNode to update
+         * @param propertyKey Property to update (optional)
          */
         updateNode(node: VNode.Node, propertyKey?: string): void;
+
         /**
-         * 删除节点
-         * @param {VNode.Node} node
-         * @param {VNode.Node} parent 如果为空则带表root跟节点下集
-         * @param {boolean} reserveOutPut 是否需要保留out产物
+         * Remove a node from the rendering
+         * @param node VNode to remove
+         * @param parent Optional parent node (root if undefined)
+         * @param reserveOutPut Whether to retain the output
          */
         removeNode(node: VNode.Node, reserveOutPut?: boolean): void;
+
         /**
-         * 销毁，卸载DOM并释放变量
+         * Destroy the renderer, unmount DOM and release resources
          */
         destroy(): void;
 
         /**
-         * element节点transition enter
+         * Handle element transition enter animation
          */
         elementToEnter(node: VNode.Element, name: string, type?: TransitionType, callBack?: Function): void;
 
         /**
-         * element节点transition leave
+         * Handle element transition leave animation
          */
         elementToLeave(node: VNode.Element, name: string, type?: TransitionType, callBack?: Function): void;
 
         /**
-         * 触发组件事件
-         * @param node
-         * @param eventName
-         * @returns false 则代表停止广播
+         * Trigger a component event
+         * @param node Component node
+         * @param eventName Event name
+         * @returns false to stop propagation
          */
         triggerEvent(node: VNode.Component, eventName: string, e: VNode.Event): void | false;
     }
 
     /**
-     * 默认Render，采用H5-DOM模式进行输出
+     * Default renderer using HTML DOM
      */
     export class DomRender implements IRender {
         public elements: DocumentFragment;
@@ -104,21 +107,21 @@ export namespace Render {
             } else if (root instanceof VNode.Component) {
                 if (root.parent) {
                     if (root.output) {
-                        let nodeEl = root.output as Element;
-                        let parentEl = getVNodeAppendToContainer(root) || nodeEl.parentNode;
+                        const nodeEl = root.output as Element;
+                        const parentEl = getVNodeAppendToContainer(root) || nodeEl.parentNode;
 
-                        //不会出现没有parentEl的场景
+                        // Parent element should always exist
                         if (parentEl) {
                             parentEl.insertBefore(this.elements, nodeEl);
                         }
                     } else {
-                        logger.error(LOGTAG, "组件挂载渲染时发现该节点未定义DOM定位节点", root);
+                        logger.error(LOGTAG, "Component mount found no DOM target node", root);
                     }
                 } else {
-                    logger.error(LOGTAG, "mount子组件时，发现该组件无父级", root);
+                    logger.error(LOGTAG, "Mounting child component with no parent", root);
                 }
             } else {
-                logger.error(LOGTAG, "mount只支持挂载到Element或VNode.Node类型数据中", root);
+                logger.error(LOGTAG, "Mount only supports Element or VNode.Node", root);
             }
         }
 
@@ -126,28 +129,27 @@ export namespace Render {
             this.renderNode(node);
 
             if (node.output) {
-                let nodes =
+                const nodes =
                     node.output instanceof HTMLCollection ||
                     node.output instanceof NodeList ||
                     Array.isArray(node.output)
                         ? Array.from(node.output)
                         : [node.output];
 
-                for (let item of nodes) {
+                for (const item of nodes) {
                     this.appendNodeChildren(node, item, node.parent, index);
                 }
 
                 return;
             }
 
-            logger.error(LOGTAG, "未找自身节点的el属性，无法进行dom挂载", node);
+            logger.error(LOGTAG, "No output found for node, cannot mount", node);
         }
 
-        updateNode(node: VNode.Node, propertyKey?: string | undefined): void {
+        updateNode(node: VNode.Node, propertyKey?: string): void {
             if (node instanceof VNode.Element) {
-                for (let attrName in node.attributes) {
-                    let attrVal = node.attributes[attrName];
-
+                for (const attrName in node.attributes) {
+                    const attrVal = node.attributes[attrName];
                     this.setAttribute(node.output, attrName, attrVal);
                 }
             } else if (node instanceof VNode.Text) {
@@ -157,7 +159,6 @@ export namespace Render {
                     TAG_PLAINTEXT_ELEMENT.includes(node.parent.tagName)
                 ) {
                     this.removeNode(node);
-
                     this.appendNode(node);
                 } else {
                     (node.output as Text).textContent = escape2Html(node.text || "");
@@ -165,32 +166,26 @@ export namespace Render {
             } else if (node instanceof VNode.Html) {
                 if (node.notShadow) {
                     node.output.innerHTML = node.html;
-
                     if (node.scopedId) {
-                        // 调用函数处理容器元素的所有子元素
                         addDataScopedAttribute(node.output, node.scopedId);
                     }
                 } else {
                     node.output.root.innerHTML = node.html;
                 }
             } else {
-                logger.error(LOGTAG, `该节点不支持${propertyKey}的更新`, node);
+                logger.error(LOGTAG, `Node does not support ${propertyKey} update`, node);
             }
         }
 
         removeNode(node: VNode.Node, reserveOutPut?: boolean): void {
-            let domNodes =
+            const domNodes =
                 node.output instanceof HTMLCollection || node.output instanceof NodeList || Array.isArray(node.output)
                     ? Array.from(node.output)
                     : [node.output];
 
-            //可能是root等无根的节点
-            domNodes?.forEach((item) => {
-                item?.remove();
-            });
+            domNodes?.forEach((item) => item?.remove());
 
             if (!reserveOutPut) {
-                //element 元素 需要清除辅助事件
                 node instanceof VNode.Element && removeAssistEvent(node);
                 node.output = undefined;
             }
@@ -202,31 +197,29 @@ export namespace Render {
 
         elementToEnter(node: VNode.Element, name: string, type?: TransitionType, callBack?: Function): void {
             if (!node.output) return;
-
             this.transitionFrame(node, name, "enter", type, callBack);
         }
 
         elementToLeave(node: VNode.Element, name: string, type?: TransitionType, callBack?: Function): void {
             if (!node.output) return;
-
             this.transitionFrame(node, name, "leave", type, callBack);
         }
 
         triggerEvent(node: VNode.Component, _eventName: string, _e: VNode.Event): void | false {
-            let removeEvent: any[] = [];
-            for (let item of node.events) {
-                let [eventName, event] = item;
+            const removeEvent: any[] = [];
+            for (const item of node.events) {
+                const [eventName, event] = item;
 
                 if (eventName === _eventName) {
-                    let isSelf = event.modifiers?.includes("self");
-                    let isOutSide = event.modifiers?.includes("outside");
+                    const isSelf = event.modifiers?.includes("self");
+                    const isOutSide = event.modifiers?.includes("outside");
 
                     if (isSelf || isOutSide) {
-                        logger.warn(LOGTAG, "事件修饰符：self、outside在组件事件中无法使用，组件无法确认元素", node);
+                        logger.warn(LOGTAG, "Event modifiers 'self' and 'outside' not supported in components", node);
                         continue;
                     }
 
-                    let e = _e.event;
+                    const e = _e.event;
 
                     if (
                         (e instanceof KeyboardEvent && ["keydown", "keypress", "keyup"].includes(eventName)) ||
@@ -252,15 +245,12 @@ export namespace Render {
                 }
             }
 
-            //剔除需要移除的事件
             if (removeEvent.length) {
-                removeEvent.forEach((e) => {
-                    remove(node.events, e);
-                });
+                removeEvent.forEach((e) => remove(node.events, e));
             }
         }
 
-        //#region 私有实现
+        //#region Private implementations
         private transitionFrame(
             node: VNode.Element,
             transitionName: string,
@@ -271,18 +261,16 @@ export namespace Render {
             addClassName(node, getTransitionClassName(transitionName, model, "from"));
             type ||= "transition";
 
-            let id = (node!.output!.__TRANSITION_EVNETID__ = eventSeed++);
+            const id = (node!.output!.__TRANSITION_EVNETID__ = eventSeed++);
 
-            // 在下一帧执行的时候移除class
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     if (!node.output) return;
                     addClassName(node, getTransitionClassName(transitionName, model, "active"));
-
                     removeClassName(node, getTransitionClassName(transitionName, model, "from"));
                     addClassName(node, getTransitionClassName(transitionName, model, "to"));
 
-                    let transitionInfo = getTransitionInfo(node.output!, type!);
+                    const transitionInfo = getTransitionInfo(node.output!, type!);
 
                     if (!transitionInfo) {
                         callBack?.();
@@ -291,34 +279,28 @@ export namespace Render {
 
                     let ended = 0;
 
-                    // 定义一个供addEventListener执行的回调函数
-                    let resolve = () => {
+                    const resolve = () => {
                         removeClassName(node, getTransitionClassName(transitionName, model, "to"));
                         removeClassName(node, getTransitionClassName(transitionName, model, "active"));
-
-                        //可能存在越级删除，造成动画元素过早移除，
                         if (!node.output) return;
-
                         node.output.removeEventListener(`${type}end`, onEnd);
-
                         if (id === node!.output!.__TRANSITION_EVNETID__) {
                             callBack?.();
                         }
                     };
 
-                    let onEnd = (e: Event) => {
-                        if (e.target === node.output && ++ended >= transitionInfo!.count) {
+                    const onEnd = (e: Event) => {
+                        if (e.target === node.output && ++ended >= transitionInfo.count) {
                             resolve();
                         }
                     };
 
                     setTimeout(() => {
-                        if (ended < transitionInfo!.count) {
+                        if (ended < transitionInfo.count) {
                             resolve();
                         }
                     }, transitionInfo.timeout + 1);
 
-                    // 监听动效结束事件，type由props传入
                     node.output?.addEventListener(`${type}end`, onEnd);
                 });
             });
@@ -339,21 +321,17 @@ export namespace Render {
                 }
             } else if (node instanceof VNode.Html) {
                 if (node.notShadow) {
-                    let container = document.createElement("joker-html-container");
+                    const container = document.createElement("joker-html-container");
                     //@ts-ignore
                     container.JOKER_NODE = node;
                     container.innerHTML = node.html;
-
                     if (node.scopedId) {
-                        // 为容器元素添加 data-scoped 属性
                         container.setAttribute("data-scoped-" + node.scopedId, "");
-
-                        // 调用函数处理容器元素的所有子元素
                         addDataScopedAttribute(container, node.scopedId);
                     }
                     node.output = container;
                 } else {
-                    let conatiner = document.createElement("joker-html-shadow") as HtmlContainerWebComponent;
+                    const conatiner = document.createElement("joker-html-shadow") as HtmlContainerWebComponent;
                     //@ts-ignore
                     conatiner.JOKER_NODE = node;
                     conatiner.style.lineHeight = "1";
@@ -362,7 +340,7 @@ export namespace Render {
                 }
             } else if (node instanceof VNode.Element) {
                 let element: any;
-                let tagName = node.tagName.toLowerCase();
+                const tagName = node.tagName.toLowerCase();
 
                 //@ts-ignore
                 if (tagName === "svg" || svgElementTags.includes(tagName) || node.parent?.inSvg) {
@@ -373,7 +351,7 @@ export namespace Render {
                     element = document.createElement(node.tagName);
                 }
 
-                for (let attrName in node.attributes) {
+                for (const attrName in node.attributes) {
                     this.setAttribute(element, attrName, node.attributes[attrName]);
                 }
                 //@ts-ignore
@@ -381,9 +359,7 @@ export namespace Render {
 
                 node.output = element;
 
-                //做穿透延迟仅对outside.click
                 if (node.events.some((n) => n[0] === "click" && n[1].modifiers?.includes("outside"))) {
-                    //宏任务
                     setTimeout(() => {
                         this.initElementEvents(element, node);
                     });
@@ -398,53 +374,33 @@ export namespace Render {
         }
 
         private initElementEvents(el: HTMLElement, node: VNode.Element) {
-            for (let [eventName, event] of node.events) {
-                let isSelf = event.modifiers?.includes("self");
+            for (const [eventName, event] of node.events) {
+                const isSelf = event.modifiers?.includes("self");
                 let isOutSide = event.modifiers?.includes("outside");
 
                 if (isSelf && isOutSide) {
-                    logger.warn(LOGTAG, "事件修饰符：self、outside不可以同时存在，将按照self处理", node);
+                    logger.warn(LOGTAG, "Event modifiers 'self' and 'outside' cannot coexist, using 'self'", node);
                     isOutSide = false;
                 }
 
-                let eventCallBack = function (e: Event) {
-                    //节点睡眠时，不做事件传递和广播
+                const eventCallBack = (e: Event) => {
                     if (node.sleep) return;
 
-                    /**
-                     * self : 必须是本身
-                     * prevent : 阻止系统
-                     * stop : 阻止冒泡
-                     * once : 只触发一次
-                     * outside : 外围时触发
-                     */
-
                     if (isSelf) {
-                        //不是自身时不执行
-                        if (e.target !== el) {
-                            return;
-                        }
+                        if (e.target !== el) return;
                     }
 
                     if (isOutSide) {
-                        //是自身时不执行
-                        if (e.target === el || el.contains(<any>e.target)) {
-                            return;
-                        }
-
-                        //空冒泡事件
+                        if (e.target === el || el.contains(<any>e.target)) return;
                         if (document.contains(<any>e.target) === false) return;
-
-                        //append-to时，dom层级无法确认
                         if (
                             node.contains((n) => {
-                                let nodes =
+                                const nodes =
                                     n.output instanceof HTMLCollection ||
                                     n.output instanceof NodeList ||
                                     Array.isArray(n.output)
                                         ? Array.from(n.output)
                                         : [n.output];
-
                                 return nodes.includes(e.target);
                             })
                         ) {
@@ -462,11 +418,8 @@ export namespace Render {
                     event.callBack({
                         eventName,
                         event: e,
-                        /**目标元素 */
                         target: node,
-                        /** 阻止默认事件 */
                         preventDefault: () => e.preventDefault(),
-                        /** 阻止事件传播 */
                         stopPropagation: () => e.stopPropagation(),
                         data: undefined
                     });
@@ -487,12 +440,14 @@ export namespace Render {
                         }
                     }
                 };
+
                 let eventOpt = undefined;
                 if (event.modifiers?.includes("passive")) {
                     eventOpt = {
                         passive: true
                     };
                 }
+
                 if (isOutSide) {
                     registoryAssistEvent(node, eventName, eventCallBack, eventOpt);
                 } else {
@@ -502,8 +457,7 @@ export namespace Render {
         }
 
         private parserHtml(str: string): NodeList {
-            var tempContainer = document.createElement("div");
-
+            const tempContainer = document.createElement("div");
             tempContainer.innerHTML = str;
             return tempContainer.childNodes;
         }
@@ -527,57 +481,42 @@ export namespace Render {
             }
 
             if (parent === undefined) {
-                //根节点+appendTo
                 this.elements?.appendChild(element);
             } else if (parent) {
                 if (parent instanceof VNode.Root) {
-                    //root上是VNode.Componet容器
-                    let containerParent = parent.parent;
+                    const containerParent = parent.parent;
                     if (containerParent && containerParent instanceof VNode.Component) {
-                        //这种场景一般只使用与weakup时再挂载
                         if (containerParent.output) {
-                            let nodeEl = containerParent.output as Element;
-                            let parentEl = nodeEl?.parentNode;
-
-                            //不会出现没有parentEl的场景
-
+                            const nodeEl = containerParent.output as Element;
+                            const parentEl = nodeEl?.parentNode;
                             if (parentEl) {
                                 parentEl.insertBefore(element, nodeEl);
                                 return;
                             }
                         }
                     }
-                    //全部兜底，是存在组件内直接是命令的场景，会出现parent.parent还未挂载
-                    //该场景应算顺序执行的产物
                     this.elements?.appendChild(element);
                 } else if (parent instanceof VNode.Element) {
-                    let parentEl = parent.output;
-                    //可能被销毁
-                    if (parentEl === undefined) {
-                        return;
-                    }
+                    const parentEl = parent.output;
+                    if (parentEl === undefined) return;
                     parentEl.appendChild(element);
                 } else if (this.isCommandGroup(parent)) {
-                    //如果if 或者 for循环中存在 append-to 则直接向body输出，不考虑body输出顺序
-                    let parentEl = parent.output?.parentNode as HTMLElement;
+                    const parentEl = parent.output?.parentNode as HTMLElement;
 
                     if (index !== undefined && parent.childrens?.length && parentEl) {
-                        let prevNodeIndex = index - 1;
+                        const prevNodeIndex = index - 1;
                         if (prevNodeIndex < 0) {
-                            let firstNode = getNodePrevInstallPosition(node);
-
+                            const firstNode = getNodePrevInstallPosition(node);
                             if (firstNode && parentEl.contains(firstNode.output)) {
-                                // 可能下节点 是append-to,脱离文档流
                                 firstNode.output.after(element);
                             } else {
                                 parentEl.insertBefore(element, parentEl.firstChild);
                             }
-
                             return;
                         } else {
-                            let prevNode = parent.childrens[prevNodeIndex];
+                            const prevNode = parent.childrens[prevNodeIndex];
                             if (prevNode) {
-                                let appendNodeTag = <HTMLElement>prevNode.output;
+                                const appendNodeTag = <HTMLElement>prevNode.output;
                                 if (appendNodeTag) {
                                     appendNodeTag.after(element);
                                     return;
@@ -586,12 +525,11 @@ export namespace Render {
                         }
                     }
 
-                    //不会出现没有parentEl的场景
                     if (parentEl) {
                         parentEl.insertBefore(element, parent.output);
                     }
                 } else {
-                    logger.error(LOGTAG, `该节点不支持嵌套子集，请检查。`, { node, parent });
+                    logger.error(LOGTAG, "Node does not support nested children", { node, parent });
                 }
             }
         }
@@ -599,7 +537,6 @@ export namespace Render {
         private setAttribute(el: HTMLElement, attrName: string, attrVal: any) {
             if (!el) return;
             if (typeof attrVal === "boolean") {
-                //如果是boolean，则做新增和删除特性处理
                 if (attrVal) {
                     el.setAttribute(attrName, "");
                 } else {
@@ -610,10 +547,10 @@ export namespace Render {
 
             if (attrName === "class") {
                 if (Array.isArray(attrVal)) {
-                    let newClass: string[] = [];
-                    for (let val of attrVal) {
+                    const newClass: string[] = [];
+                    for (const val of attrVal) {
                         if (isObject(val)) {
-                            for (let name in val) {
+                            for (const name in val) {
                                 if (val[name]) {
                                     newClass.push(name);
                                 }
@@ -622,35 +559,30 @@ export namespace Render {
                             val && newClass.push(val);
                         }
                     }
-
                     attrVal = newClass.join(" ");
                 } else if (isObject(attrVal)) {
-                    for (let name in attrVal) {
-                        name = name.trim();
-                        if (!name) continue;
+                    for (const name in attrVal) {
+                        const trimmedName = name.trim();
+                        if (!trimmedName) continue;
                         if (attrVal[name]) {
-                            el.classList.add(name);
+                            el.classList.add(trimmedName);
                         } else {
-                            el.classList.remove(name);
+                            el.classList.remove(trimmedName);
                         }
                     }
                     return;
                 }
             } else if (attrName === "style" && isObject(attrVal)) {
                 el.removeAttribute("style");
-
-                for (let name in attrVal) {
+                for (const name in attrVal) {
                     let isEmptyValue = false;
                     if (attrVal[name] === undefined || attrVal[name] === false) {
                         isEmptyValue = true;
                     }
-
-                    let val = String(attrVal[name]);
+                    const val = String(attrVal[name]);
                     if (isEmptyStr(val)) {
                         isEmptyValue = true;
                     }
-
-                    //非空
                     if (!isEmptyValue) {
                         //@ts-ignore
                         el.style[name] = val;
@@ -687,8 +619,9 @@ export function getTransitionClassName(
 ): string {
     return `${transition}-${mode}-${type}`;
 }
+
 /**
- * 注册协助事件，用于做outside等全局事件记录
+ * Register assist event for outside event handling
  */
 function registoryAssistEvent(
     node: VNode.Element,
@@ -697,18 +630,13 @@ function registoryAssistEvent(
     eventOpt: any
 ) {
     node._assistEventCache ??= [];
-
     node._assistEventCache.push([eventName, eventCallBack]);
-
     document.body.addEventListener(eventName, eventCallBack, eventOpt);
 }
 
 function removeAssistEvent(node: VNode.Element, eventName?: string, eventCallBack?: (e: Event) => void) {
     if (node._assistEventCache && eventName && eventCallBack) {
-        removeFilter(node._assistEventCache, (m) => {
-            return m[0] === eventName && m[1] === eventCallBack;
-        });
-
+        removeFilter(node._assistEventCache, (m) => m[0] === eventName && m[1] === eventCallBack);
         document.body.removeEventListener(eventName, eventCallBack);
     } else {
         node._assistEventCache?.forEach((m) => {
@@ -734,10 +662,7 @@ const keyEventModifierNative = {
 function checkEventModifier(e: KeyboardEvent | MouseEvent, modifiers?: string[]): boolean {
     if (e instanceof KeyboardEvent) {
         if (e.key === undefined) return false;
-
-        for (let name in keyEventModifierNative) {
-            //当有修饰约束 && 约束不成立 则return false 终止
-
+        for (const name in keyEventModifierNative) {
             if (
                 //@ts-ignore
                 modifiers?.includes(keyEventModifierNative[name]) &&
@@ -760,13 +685,11 @@ function checkEventModifier(e: KeyboardEvent | MouseEvent, modifiers?: string[])
 
 function addClassName(node: VNode.Element, className: string) {
     if (!node.output) return;
-
     (<HTMLElement>node.output).classList.add(className);
 }
 
 function removeClassName(node: VNode.Element, className: string) {
     if (!node.output) return;
-
     (<HTMLElement>node.output).classList.remove(className);
 }
 
@@ -785,25 +708,22 @@ function getVNodeAppendToContainer(node: VNode.Node) {
                         appendTo = `${Render.ROOT_CONTAINER} ${appendTo}`;
                     }
                 }
-                let dom = document.querySelector(appendTo);
-
+                const dom = document.querySelector(appendTo);
                 if (dom) return dom;
             }
-            logger.warn(LOGTAG, "appendTo类型不支持", { appendTo, node });
+            logger.warn(LOGTAG, "Unsupported appendTo type", { appendTo, node });
         }
     }
 }
 
 function getTransitionInfo(el: Element, type: TransitionType) {
-    let styles = window.getComputedStyle(el);
-
-    let getStyleProperties = (key: any) => (styles[key] || "").split(", ");
+    const styles = window.getComputedStyle(el);
+    const getStyleProperties = (key: any) => (styles[key] || "").split(", ");
 
     if (type === "transition") {
-        let delays = getStyleProperties("transitionDelay");
-        let durations = getStyleProperties("transitionDuration");
-        let timeout = getTimeout(delays, durations);
-
+        const delays = getStyleProperties("transitionDelay");
+        const durations = getStyleProperties("transitionDuration");
+        const timeout = getTimeout(delays, durations);
         if (timeout > 0) {
             return {
                 timeout,
@@ -811,10 +731,9 @@ function getTransitionInfo(el: Element, type: TransitionType) {
             };
         }
     } else if (type === "animation") {
-        let delays = getStyleProperties("animationDelay");
-        let durations = getStyleProperties("animationDuration");
-        let timeout = getTimeout(delays, durations);
-
+        const delays = getStyleProperties("animationDelay");
+        const durations = getStyleProperties("animationDuration");
+        const timeout = getTimeout(delays, durations);
         if (timeout > 0) {
             return {
                 timeout,
@@ -828,21 +747,17 @@ function getTimeout(delays: string[], durations: string[]): number {
     while (delays.length < durations.length) {
         delays.concat(delays);
     }
-
     return Math.max(...durations.map((d, i) => toMs(d) + toMs(delays[i])));
 }
 
 function toMs(s: string): number {
     if (s === "auto") return 0;
-
     return Number(s.slice(0, -1).replace(",", ".")) * 1000;
 }
 
 function getNodePrevInstallPosition(node: VNode.Node, notSearchParent?: boolean): VNode.Node | undefined {
     let prev = node.prev;
-    //平级找
     while (prev) {
-        //只要不是 内嵌子集的就向后输出
         if (prev instanceof VNode.ListItem === false) {
             return prev;
         }
@@ -850,49 +765,38 @@ function getNodePrevInstallPosition(node: VNode.Node, notSearchParent?: boolean)
     }
 
     if (!notSearchParent) {
-        //往上找
         let parent = node.parent;
-
         while (parent) {
             if (parent instanceof VNode.Element) return;
-
-            let result = getNodePrevInstallPosition(parent, true);
-
+            const result = getNodePrevInstallPosition(parent, true);
             if (result) return result;
-
             parent = parent.parent;
         }
     }
     return;
 }
 
-// 创建一个自定义元素
 class HtmlContainerWebComponent extends HTMLElement {
     root: ShadowRoot;
 
     constructor() {
         super();
-
         this.root = this.attachShadow({ mode: "open" });
     }
 }
 
-// 注册自定义元素
 !customElements.get("joker-html-shadow") && customElements.define("joker-html-shadow", HtmlContainerWebComponent);
 
-// 递归为所有元素节点添加 data-scoped 属性
+/**
+ * Recursively add data-scoped attributes to all elements
+ */
 function addDataScopedAttribute(element: HTMLElement, scoped: string) {
-    // 使用 element.childNodes 获取包含文本节点的所有子节点
     const childNodes = element.childNodes;
-
     for (let i = 0; i < childNodes.length; i++) {
         const node = childNodes[i];
-
-        // 只处理元素节点 (Node.ELEMENT_NODE === 1)
         if (node.nodeType === 1) {
             const childElement = node as HTMLElement;
             childElement.setAttribute("data-scoped-" + scoped, "");
-            // 递归处理子元素
             addDataScopedAttribute(childElement, scoped);
         }
     }

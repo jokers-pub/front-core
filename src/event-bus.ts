@@ -18,10 +18,10 @@ export class EventBus<T extends Record<string, any>> {
     private eventDatas: Map<keyof T, EventCallBackItem<any>[]> = new Map();
 
     /**
-     * 注册事件
-     * @param eventName
-     * @param callBack
-     * @returns 事件销毁
+     * Register an event
+     * @param eventName Event name
+     * @param callBack Callback function
+     * @returns Event destruction function
      */
     public on<K extends keyof T>(eventName: K | "*", callBack: EventCallBackType<T[K]>) {
         let callbacks = this.eventDatas.get(eventName);
@@ -31,7 +31,7 @@ export class EventBus<T extends Record<string, any>> {
             this.eventDatas.set(eventName, callbacks);
         }
 
-        let newItem = { callBack };
+        const newItem = { callBack };
         callbacks.push(newItem);
 
         return () => {
@@ -40,10 +40,10 @@ export class EventBus<T extends Record<string, any>> {
     }
 
     /**
-     * 注册一次性事件（指触发一次）
-     * @param eventName
-     * @param callBack
-     * @returns 事件销毁
+     * Register a one-time event (triggers once)
+     * @param eventName Event name
+     * @param callBack Callback function
+     * @returns Event destruction function
      */
     public once<K extends keyof T>(eventName: K, callBack: EventCallBackType<T[K]>) {
         let callbacks = this.eventDatas.get(eventName);
@@ -53,7 +53,7 @@ export class EventBus<T extends Record<string, any>> {
             this.eventDatas.set(eventName, callbacks);
         }
 
-        let newItem = { callBack, once: true };
+        const newItem = { callBack, once: true };
         callbacks.push(newItem);
         return () => {
             callbacks && remove(callbacks, newItem);
@@ -61,10 +61,9 @@ export class EventBus<T extends Record<string, any>> {
     }
 
     /**
-     * 销毁事件
-     * @param eventName
-     * @param callBack
-     * @returns
+     * Remove event listeners
+     * @param eventName Event name (optional)
+     * @param callBack Specific callback to remove (optional)
      */
     public off<K extends keyof T>(eventName?: K, callBack?: EventCallBackType<T[K]>) {
         if (eventName === undefined) {
@@ -72,35 +71,32 @@ export class EventBus<T extends Record<string, any>> {
             return;
         }
         if (callBack) {
-            let callBacks = this.eventDatas.get(eventName);
-
-            let removeItem = callBacks?.find((m) => m.callBack === callBack);
-
-            removeItem && remove(callBacks!, removeItem);
+            const callbacks = this.eventDatas.get(eventName);
+            const removeItem = callbacks?.find((m) => m.callBack === callBack);
+            removeItem && remove(callbacks!, removeItem);
         } else {
-            // off all
+            // Remove all listeners for the event
             this.eventDatas.delete(eventName);
         }
     }
 
     /**
-     * 触发事件
-     * @param eventName
-     * @param param
-     * @returns
+     * Trigger an event
+     * @param eventName Event name
+     * @param param Event parameter
+     * @returns Whether the event was stopped (`false` if stopped)
      */
     public async trigger<K extends keyof T>(eventName: K, param?: T[K]) {
-        let callBacks = [...(this.eventDatas.get(eventName) || [])];
+        let callbacks = [...(this.eventDatas.get(eventName) || [])];
+        callbacks.push(...(this.eventDatas.get("*") || []));
 
-        callBacks.push(...(this.eventDatas.get("*") || []));
-
-        if (callBacks && callBacks.length) {
+        if (callbacks && callbacks.length) {
             let i = 0,
                 callTimes = 0,
                 isBreak = false;
-            while (callBacks[i]) {
-                let item = callBacks[i];
-                let result = await item.callBack(
+            while (callbacks[i]) {
+                const item = callbacks[i];
+                const result = await item.callBack(
                     {
                         stopPropagation: () => (isBreak = true),
                         callTimes,
@@ -110,7 +106,7 @@ export class EventBus<T extends Record<string, any>> {
                 );
 
                 if (item.once) {
-                    remove(callBacks, item);
+                    remove(callbacks, item);
                 } else {
                     i++;
                 }

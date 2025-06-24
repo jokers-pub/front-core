@@ -8,7 +8,7 @@ import { observer } from "../observer";
 import { DEFAULT_SECTION_TAG } from "./command/section";
 import { VNode } from "./vnode";
 
-const LOGTAG = "组件解析";
+const LOGTAG = "Component Parsing";
 
 export function checkIsComponent(tagName: string, ob: Component) {
     return !!ob.components[tagName] || !!getGlobalComponent(tagName);
@@ -70,7 +70,7 @@ export class ParserComponent extends IParser<
             this.beforeDestroy();
             this.renderChildren();
         } else {
-            logger.warn(LOGTAG, `当前组件无法实现reload`, this.node);
+            logger.warn(LOGTAG, "Reload operation is not supported for the current component", this.node);
         }
     }
 
@@ -78,7 +78,7 @@ export class ParserComponent extends IParser<
         for (let attr of this.ast.attributes) {
             if (attr.name === "ref") {
                 if (isEmptyStr(attr.value)) {
-                    logger.warn(LOGTAG, "元素的ref值不可以为空");
+                    logger.warn(LOGTAG, "The 'ref' value of the element cannot be empty");
                     continue;
                 }
 
@@ -102,7 +102,14 @@ export class ParserComponent extends IParser<
                         // 不做render更新，数据变更广播会向下传递
                         this.notifyNodeWatcher("update", attr.name);
                     },
-                    true
+                    true,
+                    () => {
+                        if (attr.value) {
+                            return `${attr.value} from <${"tagName" in this.ast ? this.ast.tagName : "Component"} ${
+                                attr.name
+                            }="${attr.value}" ... />  `;
+                        }
+                    }
                 );
 
                 this.node!.propValues[attr.name] = watcherValue;
@@ -136,7 +143,15 @@ export class ParserComponent extends IParser<
 
                             if (event.functionParam) {
                                 //事件触发时，主动获取，不需要做数据劫持监听
-                                eventParams = this.runExpress(`[${event.functionParam}]`, this.ob);
+                                eventParams = this.runExpress(`[${event.functionParam}]`, this.ob, () => {
+                                    if (event._code) {
+                                        let modifiers = event.modifiers?.join(".");
+
+                                        return `${event._code} from <${
+                                            "tagName" in this.ast ? this.ast.tagName : "Component"
+                                        } @${event.name}${modifiers ? "." + modifiers : ""}="${event._code}" ... />  `;
+                                    }
+                                });
                             }
 
                             <Function>eventCallBack.call(this.ext.ob, e, ...eventParams);
@@ -146,9 +161,8 @@ export class ParserComponent extends IParser<
             } else {
                 logger.error(
                     LOGTAG,
-                    `${"tagName" in this.ast ? this.ast.tagName : ""}元素中${event.name}事件所指定的回调（${
-                        event.functionName
-                    }）方法未找到，请检查`
+                    `The callback method (${event.functionName}) specified for the ${event.name} event ` +
+                        `in the ${"tagName" in this.ast ? this.ast.tagName : ""} element was not found. Please check.`
                 );
             }
         });
@@ -159,7 +173,10 @@ export class ParserComponent extends IParser<
             if ("tagName" in this.ast) {
                 let component = this.ob.components[this.ast.tagName] || getGlobalComponent(this.ast.tagName);
                 if (component === undefined) {
-                    logger.error(LOGTAG, `渲染组件失败，未找到名称为'${this.ast.tagName}'的私有组件/全局组件`);
+                    logger.error(
+                        LOGTAG,
+                        `Failed to render component. Private or global component named '${this.ast.tagName}' not found.`
+                    );
                     return;
                 }
 
@@ -240,7 +257,9 @@ export class ParserComponent extends IParser<
                 let validateCondition = ifAst.condition.startsWith(EXPRESSHANDLERTAG + ".$sections");
                 //只要根符合$section判断，无论是否时default一律处理，不考虑劫持
                 if (validateCondition) {
-                    let conditionResult = this.runExpress(ifAst.condition, this.ob);
+                    let conditionResult = this.runExpress(ifAst.condition, this.ob, () => {
+                        return ifAst._code;
+                    });
 
                     if (conditionResult) {
                         resolvedAsts.push(...ast.childrens);
@@ -253,7 +272,8 @@ export class ParserComponent extends IParser<
                 if (hasSection && ifAst.kind === "if" && !validateCondition) {
                     logger.warn(
                         LOGTAG,
-                        "在解析section时，发现该section包裹在一个条件语句中，该条件语句仅支持以$sections进行if判断，已作排出"
+                        "While parsing the section, it was found that this section is wrapped in a conditional statement. " +
+                            "This conditional statement only supports if judgments using $sections. It has been excluded."
                     );
 
                     return;

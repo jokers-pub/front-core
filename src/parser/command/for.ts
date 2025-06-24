@@ -59,7 +59,10 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                 this.clearWatchers();
                 this.renderChildrens();
             },
-            true
+            true,
+            () => {
+                return this.ast._code;
+            }
         );
 
         let index = 0;
@@ -90,13 +93,18 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                         this.updateListItemOb(stepOb, currentIndex);
                     }
                 },
-                true
+                true,
+                () => {
+                    return this.ast._code;
+                }
             );
 
             //执行下一次循环设值
-            this.runExpress(param.step, forOb);
+            this.runExpress(param.step, forOb, () => {
+                this.ast._code;
+            });
             //读取下一次的判断条件
-            breakVal = !!this.runExpress(param.condition, forOb);
+            breakVal = !!this.runExpress(param.condition, forOb, () => this.ast._code);
         }
 
         this.destroyOldChildrens(index);
@@ -105,11 +113,19 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
     private renderInOrOfChildrens() {
         let param = this.ast.param as AST.InOrOfParam;
 
-        let listOb = this.runExpressWithWatcher(param.dataKey, this.ob, () => {
-            //每次都需要重新观察
-            this.clearWatchers();
-            this.renderChildrens();
-        });
+        let listOb = this.runExpressWithWatcher(
+            param.dataKey,
+            this.ob,
+            () => {
+                //每次都需要重新观察
+                this.clearWatchers();
+                this.renderChildrens();
+            },
+            false,
+            () => {
+                return this.ast._code;
+            }
+        );
 
         let index = 0;
 
@@ -146,7 +162,10 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                                 }
                             }
                         },
-                        true
+                        true,
+                        () => {
+                            return this.ast._code;
+                        }
                     );
                 }
             }

@@ -38,7 +38,7 @@
         "front"
     ],
     "dependencies": {
-        "@joker.front/ast": "^1.3.27"
+        "@joker.front/ast": "^1.3.29"
     },
     "devDependencies": {
         "@joker.front/library-cli": "^1.2.14",

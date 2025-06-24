@@ -18,10 +18,10 @@ export type NodeChangeType = "append" | "remove" | "update" | "after-enter" | "a
 export type ObType = Component & Record<string, any>;
 
 export class ParserTemplate {
-    /** VNode 根 */
+    /** VNode root */
     public root: VNode.Root = new VNode.Root();
 
-    /** VNode ref索引集 */
+    /** VNode ref index set */
     public refs: Record<string, Array<VNode.Node>> = {};
 
     public sleeped: boolean = false;
@@ -29,14 +29,14 @@ export class ParserTemplate {
     public promiseQueue: Set<Promise<any>> = new Set();
 
     /**
-     * node变更观察者
+     * Node change observer
      */
     public nodeWatcherEvents: Record<
         string,
         Array<(node: VNode.Node, type: NodeChangeType, propertyKey?: string) => void>
     > = {};
 
-    /** VNode 渲染处理程序 （依赖注入） */
+    /** VNode rendering handler (dependency injection) */
     public render: Render.IRender;
 
     constructor(public asts: AST.Node[], public ob: ObType, parent?: VNode.Node) {
@@ -55,11 +55,11 @@ export class ParserTemplate {
     }
 
     /**
-     * VNode挂载
+     * Mount VNode
      * @param root
      */
     public mount(root: any): void {
-        //如果已经输出，则直接做挂载到render.elements
+        // If already output, directly mount to render.elements
         if (this.sleeped) {
             this.weakup();
         }
@@ -68,12 +68,12 @@ export class ParserTemplate {
     }
 
     /**
-     * 编译AST子集
+     * Compile AST subset
      * @param asts
      * @param parent
      */
     public parserNodes(asts: AST.Node[], parent: VNode.Node, ob?: Component & Record<string, any>) {
-        if (this.asts.length === 0) return; //若被销毁责终止向下渲染
+        if (this.asts.length === 0) return; // Terminate downward rendering if destroyed
 
         for (let ast of asts) {
             if (ast.type === AST.NodeType.TEXT) {
@@ -81,7 +81,7 @@ export class ParserTemplate {
             } else if (ast.type === AST.NodeType.COMMENT) {
                 new ParserComment(ast as AST.Comment, ob ?? this.ob, parent, this).init();
             } else if (ast.type === AST.NodeType.COMPONENT) {
-                //动态组件
+                // Dynamic component
                 new ParserComponent(ast as AST.Component, ob ?? this.ob, parent, this).init();
             } else if (ast.type === AST.NodeType.ELEMENT) {
                 let elementAST = <AST.Element>ast;
@@ -111,7 +111,7 @@ export class ParserTemplate {
                         ).init();
                         break;
                     case "section":
-                        //区域不做任何解析，直到组件加载时，去即时处理
+                        // Sections are not parsed until component loading, handled immediately
                         break;
                     default:
                         new ParserCode(cmdAST as AST.PropertyOrFunctionCommand, ob ?? this.ob, parent, this).init();
@@ -122,9 +122,9 @@ export class ParserTemplate {
     }
 
     /**
-     * 添加ref
-     * @param refName ref值
-     * @param node VNode节点
+     * Add ref
+     * @param refName ref value
+     * @param node VNode node
      */
     public addRef(refKey: string, node: VNode.Node) {
         this.refs[refKey] = this.refs[refKey] || [];
@@ -135,8 +135,8 @@ export class ParserTemplate {
     }
 
     /**
-     * 移除Node所在ref
-     * @param node VNode节点
+     * Remove ref where Node is located
+     * @param node VNode node
      */
     public removeRef(node: VNode.Node) {
         for (let refKey in this.refs) {
@@ -147,7 +147,7 @@ export class ParserTemplate {
     }
 
     /**
-     * 添加节点变更观察者
+     * Add node change observer
      * @param ref
      * @param callBack
      */
@@ -158,7 +158,7 @@ export class ParserTemplate {
     }
 
     /**
-     * 移除节点变更观察者
+     * Remove node change observer
      * @param ref
      * @param callBack
      */
@@ -167,7 +167,7 @@ export class ParserTemplate {
     }
 
     /**
-     * 响应节点变更，通知观察者
+     * Respond to node changes and notify observers
      * @param ref
      * @param node
      * @param nodeChangeType
@@ -181,7 +181,7 @@ export class ParserTemplate {
     public sleep(node?: VNode.Node) {
         let parent = node || this.root;
 
-        //应该所有节点remove，避免再次唤醒时，由于数据变更问题，造成dom树还原不一致/不更新
+        // All nodes should be removed to avoid inconsistent/delayed DOM tree restoration due to data changes when waking up again
         parent.childrens?.forEach((m) => {
             let next = () => {
                 if (m.childrens) {
@@ -224,7 +224,7 @@ export class ParserTemplate {
     }
 
     /**
-     * 销毁
+     * Destroy
      */
     public destroy(keepalive?: boolean) {
         while (this.root.childrens.length) {
@@ -233,7 +233,7 @@ export class ParserTemplate {
             if (item[VNode.PARSERKEY]) {
                 item[VNode.PARSERKEY].destroy(keepalive);
             } else {
-                //root 类型
+                // root type
                 remove(this.root.childrens, item);
             }
         }
@@ -248,7 +248,7 @@ export class ParserTemplate {
         this.asts.length = 0;
     }
 
-    /** 清除所有监听，用于优化嵌套组件销毁时 自定义销毁事件再次触发watcher问题 */
+    /** Clear all watches to optimize nested component destruction when custom destroy events trigger watchers again */
     public destroyWathcers() {
         for (let node of this.root.childrens) {
             if (node[VNode.PARSERKEY]) {
@@ -258,7 +258,7 @@ export class ParserTemplate {
     }
 
     public reSetAsts(asts: AST.Node[], keepalive?: boolean) {
-        //销毁历史产物
+        // Destroy historical products
         this.destroy(keepalive);
 
         this.render = IContainer.get(Render.IRENDERIOCTAGID) ?? new Render.DomRender();
@@ -303,7 +303,7 @@ export class ParserTemplate {
 
                 return true;
             } else {
-                logger.warn("渲染核心", "在执行node动画时，发现数据不完备，请检查");
+                logger.warn("Render Core", "Incomplete data found when executing node animation, please check");
             }
         }
         return false;

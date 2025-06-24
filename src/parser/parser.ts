@@ -17,7 +17,9 @@ function createExpress(express: string): Function {
     try {
         return new Function(EXPRESSHANDLERTAG, GLOBAL_TAG, `return ${express};`);
     } catch {
-        throw new Error(`创建表达式运行方法时出现未知错误，表达式为` + express);
+        throw new Error(
+            `An unknown error occurred while creating the expression execution method. The expression is: ${express}`
+        );
     }
 }
 
@@ -197,11 +199,11 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      * @param ob 数据源
      * @returns
      */
-    protected runExpress(express: string, ob: any): any {
+    protected runExpress(express: string, ob: any, customLog: () => string | void): any {
         try {
             return createExpress(express).call(ob, ob, __GLONAL_FUNTIONS__);
-        } catch (e) {
-            logger.error(LOGTAG, "运行表达式出现错误:" + express, {
+        } catch (e: any) {
+            logger.error(LOGTAG, `Expression error:${e.message}\n` + (customLog?.() || express), {
                 ob
             });
             console.error(e);
@@ -220,7 +222,8 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
         express: string | Function,
         ob: any,
         updateCallBack: (newVal: any, oldVal: any, isEqul: boolean, wathcer: Watcher) => void,
-        forceCallBack?: boolean
+        forceCallBack?: boolean,
+        customLog?: () => string | void
     ) {
         if (this.isDestroy) return;
         let expressFunction = typeof express === "string" ? createExpress(express) : express;
@@ -232,8 +235,8 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
                 }
                 try {
                     return expressFunction.call(ob, ob, __GLONAL_FUNTIONS__);
-                } catch (e) {
-                    logger.error(LOGTAG, "运行表达式出现错误", {
+                } catch (e: any) {
+                    logger.error(LOGTAG, `Expression error:${e.message}\n${customLog?.() || express}`, {
                         ob,
                         express,
                         node: this.node

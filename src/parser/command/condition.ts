@@ -9,31 +9,42 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
 
         if (this.ast.kind !== "else") {
             if (isEmptyStr(this.ast.condition)) {
-                logger.error("条件命令", `当前条件命令${this.ast.kind}没有判断条件，请检查`);
+                logger.error(
+                    "Conditional Command",
+                    `The current conditional command ${this.ast.kind} has no judgment condition, please check`
+                );
             }
 
-            let conditionResult = this.runExpressWithWatcher(this.ast.condition, this.ob, (newVal) => {
-                let value = !!newVal;
+            let conditionResult = this.runExpressWithWatcher(
+                this.ast.condition,
+                this.ob,
+                (newVal) => {
+                    let value = !!newVal;
 
-                if (this.node?.result !== value) {
-                    this.node!.result = value;
-                    if (value === false && this.node?.isShow) {
-                        //第一时间销毁子集 销毁子集 避免子集做无效的值响应更新，if切换时，使用keepalive
-                        this.destroyChildrens(true);
-                    } else if (value && !this.node?.isShow) {
-                        //第一时间销毁else
-                        let elseNode = this.getElseNode();
-                        if (elseNode && elseNode.isShow && elseNode.childrens?.length) {
-                            let parserTarget = elseNode[VNode.PARSERKEY];
-                            if (parserTarget && parserTarget instanceof ParserCondition) {
-                                parserTarget.renderConditionChildren();
+                    if (this.node?.result !== value) {
+                        this.node!.result = value;
+                        if (value === false && this.node?.isShow) {
+                            //第一时间销毁子集 销毁子集 避免子集做无效的值响应更新，if切换时，使用keepalive
+                            this.destroyChildrens(true);
+                        } else if (value && !this.node?.isShow) {
+                            //第一时间销毁else
+                            let elseNode = this.getElseNode();
+                            if (elseNode && elseNode.isShow && elseNode.childrens?.length) {
+                                let parserTarget = elseNode[VNode.PARSERKEY];
+                                if (parserTarget && parserTarget instanceof ParserCondition) {
+                                    parserTarget.renderConditionChildren();
+                                }
                             }
                         }
-                    }
 
-                    this.reloadAllCondition();
+                        this.reloadAllCondition();
+                    }
+                },
+                false,
+                () => {
+                    return this.ast._code;
                 }
-            });
+            );
 
             //第一次运行完表达式，进行留值存储
             this.node.result = !!conditionResult;
@@ -72,7 +83,9 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
             newShowState = true;
         } else {
             //刷新一次result
-            this.node!.result = !!this.runExpress(this.ast.condition, this.ob);
+            this.node!.result = !!this.runExpress(this.ast.condition, this.ob, () => {
+                this.ast._code;
+            });
             if (this.node!.result) {
                 newShowState = true;
             }

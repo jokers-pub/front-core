@@ -1,19 +1,20 @@
 import { isEqual, isObject, logger } from "@joker.front/shared";
 import { Dep } from "./dep";
-const LOGTAG = "数据观察";
+const LOGTAG = "Data Observation";
+
 export const BREAK_WATCH_UPDATE = Symbol.for("JOKER_BREAK_WATCH_UPDATE");
 /**
- * 将取值表达式转换为get方法
- * @param exp
- * @returns
+ * Convert value expression to get method
+ * @param exp Expression string
+ * @returns Getter function or undefined on error
  */
 function transformGetter(exp: string): Function | undefined {
-    //过滤非正常属性
+    // Filter invalid properties
     if (/[^\w.$]/.test(exp)) {
         return;
     }
 
-    let exps = exp.split(".");
+    const exps = exp.split(".");
 
     return function (data: object) {
         let result: any = data;
@@ -30,9 +31,10 @@ function transformGetter(exp: string): Function | undefined {
 }
 
 /**
- * 观察者
+ * Observer
  *
- * 负责观察对象，并收集依赖关系，并在值变更时做出回调响应
+ * Manages object observation, collects dependency relationships,
+ * and triggers callback responses when values change
  */
 export class Watcher<T extends object = any> {
     private getter!: Function;
@@ -43,24 +45,23 @@ export class Watcher<T extends object = any> {
 
     public updating = false;
     /**
-     * 运行时的关系收集
+     * Runtime relationship collection
      *
-     * 主要作用是：运行时做基本的重复过滤,并收集当前“有效的”Dep关系
-     * 一个Dep 肯定对应一个对象， 对象的key不会出现重复
+     * Main purpose: filter duplicates at runtime and collect "valid" Dep relationships
+     * Each Dep corresponds to an object, and object keys do not repeat
      */
     private runRelations: Map<Dep, Array<string | symbol | number>> = new Map();
 
     /**
-     * 实际关系
+     * Actual dependency relations
      */
     public relations: Map<Dep, Array<string | symbol | number>> = new Map();
 
     /**
-     *
-     * @param ob 数据源
-     * @param expOrFn 表达式（string｜Function）
-     * @param updateCallBack update回调
-     * @param forceCallBack 是否强制回调， 有些值未变更时也会强制回调
+     * @param ob Data source to observe (object or getter function)
+     * @param updateCallBack Callback function for value changes
+     * @param expOrFn Expression string or value extraction function
+     * @param forceCallBack Force callback even if value appears unchanged
      */
     constructor(
         private ob: T | (() => T),
@@ -69,7 +70,7 @@ export class Watcher<T extends object = any> {
         private forceCallBack?: boolean
     ) {
         if (ob === undefined) {
-            throw new Error("无法对underfind进行变更观察");
+            throw new Error("Cannot observe changes on undefined");
         }
 
         if (expOrFn === undefined) {
@@ -77,35 +78,38 @@ export class Watcher<T extends object = any> {
         } else if (typeof expOrFn === "function") {
             this.getter = expOrFn;
         } else {
-            let getFunc = transformGetter(expOrFn);
+            const getFunc = transformGetter(expOrFn);
 
             if (getFunc === undefined) {
-                throw new Error(expOrFn + "解析失败，无法明确读取表达式，请检查expOrFn参数，或采用function模式");
+                throw new Error(
+                    `${expOrFn} failed to parse. Unable to interpret the expression. ` +
+                        `Please check the expOrFn parameter or use the function mode instead.`
+                );
             }
             this.getter = getFunc;
         }
 
         if (this.getter === undefined) {
-            logger.error(LOGTAG, "getter创建失败", arguments);
+            logger.error(LOGTAG, "Failed to create getter", arguments);
         }
 
         this.value = this.getValue();
     }
 
     public getValue() {
-        //当前watcher被销毁，可能存在从下向上的监听广播，这里不做处理
+        // Skip if watcher is destroyed (avoids upward listening broadcasts)
         if (this.getter === undefined) {
             return;
         }
 
         Dep.target = this;
 
-        let targetData = typeof this.ob === "function" ? this.ob() : this.ob;
+        const targetData = typeof this.ob === "function" ? this.ob() : this.ob;
         let value;
         try {
             value = this.getter.call(targetData, targetData);
         } catch (e) {
-            logger.error(LOGTAG, `获取值失败，执行方法：${this.getter.toString()}`);
+            logger.error(LOGTAG, "Failed to retrieve value. Executed method: " + this.getter.toString());
             throw e;
         }
         Dep.target = undefined;
@@ -115,49 +119,48 @@ export class Watcher<T extends object = any> {
     }
 
     /**
-     * 添加Dep关系
-     * @param dep
-     * @param key
+     * Add Dep relationship
+     * @param dep Dependency instance
+     * @param key Observed property key
      */
     public addDep(dep: Dep, key: string | symbol | number) {
         let runItem = this.runRelations.get(dep);
 
-        if (runItem === undefined || runItem.includes(key) === false) {
+        if (runItem === undefined || !runItem.includes(key)) {
             runItem = runItem || [];
             runItem.push(key);
 
             this.runRelations.set(dep, runItem);
 
-            let depItem = this.relations.get(dep);
-            //判断之前有没有该关系的存储，如果没有则添加
-            //在最终clean时，会重新runRelations-》relations的转换
-            if (depItem === undefined || depItem.includes(key) === false) {
+            const depItem = this.relations.get(dep);
+            // Add if relationship not previously stored
+            // Cleanup will handle relation conversion later
+            if (depItem === undefined || !depItem.includes(key)) {
                 dep.addWatcher(key, this);
             }
         }
     }
 
     /**
-     * 更新值，并对其进行响应
+     * Update observed value and trigger response
      */
     public update() {
-        //通知过程中锁定，避免观察和响应之间循环调用
+        // Prevent circular calls during notification
         if (this.updating) return;
 
-        let newVal = this.getValue();
+        const newVal = this.getValue();
 
         if (newVal === BREAK_WATCH_UPDATE) return;
 
-        let oldVal = this.value;
+        const oldVal = this.value;
 
-        //强制回调｜｜值变更｜｜值时个对象（对象时引用类型无法查看是否变更）
+        // Force callback | value changed | value is object (reference type)
         if (this.forceCallBack || newVal !== oldVal || isObject(newVal)) {
             this.value = newVal;
 
-            //这里过滤一些引用不相等，但值相等的值，只是不做响应，但不影响下次的值变更
-            //这里没有过滤掉this.value = newVal;
-
-            let isEqualValue = newVal !== oldVal && isEqual(newVal, oldVal, true);
+            // Skip response for reference-unequal but value-equal objects
+            // (does not affect future changes)
+            const isEqualValue = newVal !== oldVal && isEqual(newVal, oldVal, true);
             if (isEqualValue && !this.forceCallBack) {
                 return;
             }
@@ -174,7 +177,7 @@ export class Watcher<T extends object = any> {
 
     public destroy() {
         this.relations.forEach((keys, dep) => {
-            for (let key of keys) {
+            for (const key of keys) {
                 dep.removeWatcher(key, this);
             }
         });
@@ -190,15 +193,14 @@ export class Watcher<T extends object = any> {
 
     private clearnDeps() {
         this.relations.forEach((keys, dep) => {
-            let runItem = this.runRelations.get(dep);
-            for (let key of keys) {
+            const runItem = this.runRelations.get(dep);
+            for (const key of keys) {
                 if (runItem) {
-                    if (runItem.includes(key) === false) {
+                    if (!runItem.includes(key)) {
                         dep.removeWatcher(key, this);
                     }
                 } else {
-                    //移除所有的dep属性关系
-                    //不移除dep，因为对象属性还在
+                    // Remove all dependencies for this key
                     dep.removeWatcher(key, this);
                 }
             }

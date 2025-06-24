@@ -2,36 +2,36 @@ import { remove, removeFilter } from "@joker.front/shared";
 import { Watcher } from "./watcher";
 
 /**
- * 作为观察者和对象代理中间的关系桥
- * 数据变更时：Ob->dep->watcher
- * 设置依赖时：watcher->dep
+ * Dependency manager acting as a bridge between watchers and proxied objects
+ * Data change flow: Ob -> dep -> watcher
+ * Dependency setup flow: watcher -> dep
  */
 export class Dep {
     /**
-     * 当前目标的监听者
+     * Current target watcher
      *
-     * 在更改值之前，设置该静态值，使其在值变更时收集相应的依赖关系
-     * 设置完毕后清除该值
+     * Set this static value before changing a value to collect dependencies,
+     * clear it after setup.
      *
-     * 之所以采用静态值，不采用方法的原因：
-     * 可能存在多值变更，或者读取
+     * Using a static value instead of a method allows handling
+     * multiple value changes/reads.
      */
     public static target?: Watcher<any>;
 
     public watchers: Map<string | symbol | number, Watcher<any>[]> = new Map();
 
     /**
-     * 设置依赖
-     * @param key
+     * Establish a dependency for a key
+     * @param key Property key to depend on
      */
     public depend(key: string | symbol | number) {
         Dep.target?.addDep(this, key);
     }
 
     /**
-     * 添加观察者
-     * @param key
-     * @param watcher
+     * Add a watcher for a key
+     * @param key Property key to watch
+     * @param watcher Watcher instance to add
      */
     public addWatcher(key: string | symbol | number, watcher: Watcher<any>) {
         let watchers = this.watchers.get(key) || [];
@@ -42,12 +42,12 @@ export class Dep {
     }
 
     /**
-     * 删除观察者
-     * @param key
-     * @param watcher
+     * Remove a watcher for a key
+     * @param key Property key to unwatch
+     * @param watcher Watcher instance to remove
      */
     public removeWatcher(key: string | symbol | number, watcher: Watcher<any>) {
-        let watchers = this.watchers.get(key);
+        const watchers = this.watchers.get(key);
 
         if (watchers) {
             remove(watchers, watcher);
@@ -55,27 +55,24 @@ export class Dep {
     }
 
     /**
-     * 通知key下面的观察者
-     * @param key
+     * Notify watchers of a key change
+     * @param key Property key that changed
      */
     public notify(key: string | symbol | number) {
-        let watchers = this.watchers.get(key);
+        const watchers = this.watchers.get(key);
 
         if (watchers) {
-            //移除已经销毁的数据
-            removeFilter(watchers, (w) => {
-                return w.isDestroy;
-            });
+            // Remove destroyed watchers
+            removeFilter(watchers, (w) => w.isDestroy);
 
             /**
-             * 由于watchers 是个动态实时变化的
-             * 所以通知时，只广播当前的观察者列队
-             * 动态新增删除的不做处理
+             * Use a copy of watchers to avoid issues with
+             * dynamic additions/removals during notification
              */
-            let _watchers = [...watchers];
+            const _watchers = [...watchers];
 
             _watchers.forEach((w) => {
-                if (w.isDestroy === false) {
+                if (!w.isDestroy) {
                     w.update();
                 }
             });
@@ -83,22 +80,26 @@ export class Dep {
     }
 }
 
+/**
+ * Notify groups of dependencies in a batch
+ * @param list Map of Dep instances to their respective keys
+ */
 export function notifyGroupDeps(list: Map<Dep, Array<string | symbol | number>>) {
-    let watchers: Watcher[] = [];
-    let hasNotifyWatchers: Watcher[] = [];
+    const watchers: Watcher[] = [];
+    const hasNotifyWatchers: Watcher[] = [];
 
-    //这里将队列重新排列，防止过程中新增监听造成不必要的循环广播
+    // Flatten watchers to avoid dynamic changes during notification
     list.forEach((keys, dep) => {
         keys.forEach((key) => {
             watchers.push(...(dep.watchers.get(key) || []));
         });
     });
 
-    watchers.forEach((n) => {
-        if (hasNotifyWatchers.includes(n)) return;
+    watchers.forEach((watcher) => {
+        if (hasNotifyWatchers.includes(watcher)) return;
 
-        n.isDestroy === false && n.update();
+        !watcher.isDestroy && watcher.update();
 
-        hasNotifyWatchers.push(n);
+        hasNotifyWatchers.push(watcher);
     });
 }

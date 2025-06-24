@@ -11,31 +11,39 @@ export type PropTypeFullModel = {
 
 export type PropType = PropValueType | Array<PropValueType> | PropTypeFullModel;
 
+/**
+ * Check if a prop value matches the specified type(s)
+ * @param key Prop key
+ * @param value Prop value
+ * @param types Expected type(s)
+ * @returns The original or converted value if valid, otherwise throws an error
+ */
 function checkPropType(key: string | symbol, value: any, types: PropValueType | Array<PropValueType>): any {
-    //undefined 不做约束
+    // Undefined values are allowed (handled by required flag)
     if (value === undefined) {
         return;
     }
 
-    let checkTypes: PropValueType[] = Array.isArray(types) ? types : [types];
+    const checkTypes: PropValueType[] = Array.isArray(types) ? types : [types];
 
-    for (let checkType of checkTypes) {
-        //解决proxy<Array> 场景下的类型判断异常问题
-        if (checkType === Array && value instanceof Array) {
+    for (const checkType of checkTypes) {
+        // Handle Array type explicitly due to proxy issues
+        if (checkType === Array && Array.isArray(value)) {
             return value;
         }
 
-        if (typeof value === (<Function>checkType).name.toLocaleLowerCase()) {
+        // Check primitive types by lowercase comparison
+        if (typeof value === (<Function>checkType).name.toLowerCase()) {
             return value;
         }
     }
 
-    //使用第一个类型兼容转换
+    // Attempt type conversion for the first specified type
     switch (checkTypes[0]) {
         case Number:
-            let newVal = Number(value);
-            if (isNaN(newVal) === false) {
-                return newVal;
+            const numValue = Number(value);
+            if (!isNaN(numValue)) {
+                return numValue;
             }
             break;
 
@@ -43,9 +51,16 @@ function checkPropType(key: string | symbol, value: any, types: PropValueType | 
             return String(value);
     }
 
-    throw new Error(`props中${key.toString()}的类型不符合约束类型`);
+    throw new Error(`The type of ${key.toString()} in props does not match the constrained type`);
 }
 
+/**
+ * Get and validate a prop value based on its definition
+ * @param propsData Source props data
+ * @param key Prop key
+ * @param propsType Prop type definition
+ * @returns Validated and processed prop value
+ */
 export function getPropValue(
     propsData: Readonly<Record<string | symbol, any>>,
     key: string | symbol,
@@ -58,9 +73,12 @@ export function getPropValue(
 
     let propValue: any;
 
+    // Check for exact key match first
     if (key in propsData) {
         propValue = propsData[key];
-    } else if (patchKey) {
+    }
+    // Then check for case-insensitive match
+    else if (patchKey) {
         propValue = propsData[patchKey];
     }
 
@@ -72,30 +90,39 @@ export function getPropValue(
             propOption = propsType[patchKey];
         }
     }
+
     if (propOption !== undefined) {
+        // Handle full model definition
         if (
             isPlainObject(propOption) &&
             ("type" in propOption || "required" in propOption || "default" in propOption || "validate" in propOption)
         ) {
-            let fullModel = <PropTypeFullModel>propOption;
+            const fullModel = <PropTypeFullModel>propOption;
 
+            // Check required flag
             if (fullModel.required && propValue === undefined) {
-                throw new Error(`props中key:${key.toString()}是必须项，请检查`);
+                throw new Error(`props key:${key.toString()} is required, please check`);
             }
 
+            // Validate type
             if (fullModel.type) {
                 propValue = checkPropType(key, propValue, fullModel.type);
             }
 
+            // Run custom validation
             if (fullModel.validate && fullModel.validate(propValue) === false) {
-                throw new Error(`props中key${key.toString()}的值校验错误`);
+                throw new Error(`Validation failed for props key ${key.toString()}`);
             }
 
+            // Apply default value if needed
             propValue = propValue ?? fullModel.default;
-        } else if (isPropsType(propOption)) {
+        }
+        // Handle shorthand type definition
+        else if (isPropsType(propOption)) {
             propValue = checkPropType(key, propValue, propOption);
-        } else {
-            //默认值
+        }
+        // Treat as default value
+        else {
             propValue = propValue ?? propOption;
         }
 
@@ -105,13 +132,19 @@ export function getPropValue(
     return propValue;
 }
 
+/**
+ * Check if a value represents a valid prop type definition
+ * @param propOption Value to check
+ * @returns True if valid prop type, false otherwise
+ */
 function isPropsType(propOption: any): boolean {
     if ([String, Array, Number, Object, Function, Boolean].includes(propOption)) {
         return true;
     }
 
-    if (propOption instanceof Array) {
+    if (Array.isArray(propOption)) {
         return isPropsType(propOption[0] as any);
     }
+
     return false;
 }
