@@ -105,9 +105,9 @@ export class ParserComponent extends IParser<
                     true,
                     () => {
                         if (attr.value) {
-                            return `${attr.value} from <${"tagName" in this.ast ? this.ast.tagName : "Component"} ${
-                                attr.name
-                            }="${attr.value}" ... />  `;
+                            return `express:${attr.value} \nfrom <${
+                                "tagName" in this.ast ? this.ast.tagName : "Component"
+                            } ${attr.name}="${attr.value}" ... />  `;
                         }
                     }
                 );
@@ -147,7 +147,7 @@ export class ParserComponent extends IParser<
                                     if (event._code) {
                                         let modifiers = event.modifiers?.join(".");
 
-                                        return `${event._code} from <${
+                                        return `express:${event._code} \nfrom: <${
                                             "tagName" in this.ast ? this.ast.tagName : "Component"
                                         } @${event.name}${modifiers ? "." + modifiers : ""}="${event._code}" ... />  `;
                                     }

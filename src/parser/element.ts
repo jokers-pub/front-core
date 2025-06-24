@@ -52,7 +52,7 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                     false,
                     () => {
                         if (attr.value) {
-                            return `${attr.value} from <${this.ast.tagName} ${attr.name}="${attr.value}" ... />  `;
+                            return `express:${attr.value} \nfrom <${this.ast.tagName} ${attr.name}="${attr.value}" ... />  `;
                         }
                     }
                 );
@@ -87,7 +87,7 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                                     if (event._code) {
                                         let modifiers = event.modifiers?.join(".");
 
-                                        return `${event._code} from <${this.ast.tagName} @${event.name}${
+                                        return `express:${event._code}\nfrom <${this.ast.tagName} @${event.name}${
                                             modifiers ? "." + modifiers : ""
                                         }="${event._code}" ... />  `;
                                     }
