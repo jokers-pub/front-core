@@ -7,7 +7,7 @@ import { BREAK_WATCH_UPDATE, Watcher } from "../observer/watcher";
 import { VNode } from "./vnode";
 
 export const GLOBAL_TAG = "Global";
-const LOGTAG = "渲染核心";
+const LOGTAG = "Render Core";
 /**
  * 创建表达式运行方法
  * @param express 表达式字符串（依赖AST转换，自带参数文根）
