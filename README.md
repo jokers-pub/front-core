@@ -86,10 +86,10 @@ Upon successful execution, a sample page will be displayed.
 
 A front-end framework with built-in visual tools: [Visual Coding IDE](https://jokers.pub)
 
-![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img4.png)
-![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img2.png)
-![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img1.jpg)
-![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img3.jpg)
+![Joker Visual Coding IDE](https://static.jokers.pub/home/component.png)
+![Joker Visual Coding IDE](https://static.jokers.pub/home/workflow.png)
+![Joker Visual Coding IDE](https://static.jokers.pub/home/validate.jpg)
+![Joker Visual Coding IDE](https://static.jokers.pub/home/ai.png)
 
 ### Documentation
 
