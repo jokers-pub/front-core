@@ -1,22 +1,32 @@
-# Joker ![npm](https://img.shields.io/npm/v/%40joker.front%2Fcore)![NPM Downloads](https://img.shields.io/npm/dw/%40joker.front%2Fcore)
+## Joker
 
-Joker is a framework platform designed to provide support for all development scenarios. Among them, Joker.front is a front-end development framework under the Joker platform. It provides standardized front-end development standards, adopts an object-oriented and component-based programming model to help you develop user interfaces efficiently. Whether it's a simple or complex interface, Joker.front can handle it with ease.
+Joker is a framework platform engineered to support all development scenarios. Within its ecosystem, Joker.front stands as a front-end development framework. It delivers standardized front-end development protocols and employs an object-oriented, component-based programming model to facilitate efficient user interface development. Whether handling simple or complex interfaces, Joker.front operates with seamless proficiency.
 
-## What is Joker?
+<p align="center"><a href="https://jokers.pub" target="_blank" rel="noopener noreferrer"><img width="100" src="https://static.jokers.pub/joker.png" alt="Vue logo"></a></p>
 
-Joker is a framework platform committed to providing support for all development scenarios. Joker.front, as a part of the Joker platform, is a front-end development framework. It provides standardized front-end development specifications and uses object-oriented and component-based programming methods to assist in efficiently building user interfaces. Whether the interface is simple or complex, Joker.front can handle it smoothly.
+<p align="center">
+    <img alt="NPM Version" src="https://img.shields.io/npm/v/%40joker.front%2Fcore">
+    <img alt="NPM Downloads" src="https://img.shields.io/npm/d18m/%40joker.front%2Fcore">
+    <img alt="NPM License" src="https://img.shields.io/npm/l/%40joker.front%2Fcore">
+</p>
 
-Joker is an all-purpose development platform built on TypeScript. Whether dealing with simple interface development requirements or handling complex user interface tasks, it demonstrates excellent performance and stability. It has the following important features:
+### What is Joker?
 
--   **Powerful Scalability**: Joker provides a component-based framework. It has considered scalability from the beginning of its design, so it can be easily integrated into existing projects or systems, support the construction of scalable web applications, and can be customized according to project requirements.
--   **Rich Component Library**: Joker.front provides a complete set of front-end component libraries, including carefully designed and optimized functional and UI components such as routing and scaffolding, which can help developers quickly build beautiful and high-performance user interfaces.
--   **Complete Development Tools**: To further improve development efficiency, Joker also provides a series of supporting development tools, including debugging tools, building tools, etc. These carefully designed tools are aimed at making the development process smoother and helping developers develop, build, test, and update code accurately and quickly.
--   **Class API**: Joker uses TypeScript as the script development standard and adopts the standard Class API as the development specification, which is more in line with the requirements of object-oriented development.
--   **Responsiveness**: Joker will automatically track the JavaScript state, and can update the DOM in a responsive manner immediately when the state changes, and there is no difference comparison of the virtual DOM.
+Joker is a versatile framework platform built on TypeScript, designed to cater to diverse development needs—from basic interface tasks to complex user interface challenges. It ensures exceptional performance and stability across all use cases. As a key part of this ecosystem, Joker.front serves as a front-end development framework, offering standardized specifications and leveraging object-oriented, component-based programming to streamline efficient UI construction, handling both simple and complex interfaces with ease.
 
-## Performance
+Key features include:
 
-Joker uses a special rendering logic to achieve the collection of the association relationship between responsive data and the DOM, and allows for point-to-point node changes when the data changes, avoiding the redrawing of the entire virtual node and the comparison process of the binary tree, greatly improving the rendering performance.
+-   **Robust Scalability**: Joker provides a component-based framework with scalability as a foundational design principle. It integrates seamlessly into existing projects or systems, supports the construction of scalable web applications, and allows for customization based on project requirements.
+-   **Comprehensive Component Library**: Joker.front offers a full suite of front-end components, including meticulously designed and optimized functional and UI elements such as routing and scaffolding. These components enable developers to quickly build visually appealing, high-performance user interfaces.
+-   **Complete Development Toolchain**: To enhance development efficiency, Joker includes a range of supporting tools—such as debugging and build tools—designed to streamline the development process, enabling accurate and rapid coding, building, testing, and updating.
+-   **Class API**: Joker adopts TypeScript as the standard for script development and employs a standard Class API, aligning with object-oriented development requirements.
+-   **Responsiveness**: Joker automatically tracks JavaScript states and updates the DOM reactively in real time when states change.
+-   **High Performance**: It achieves point-to-point data synchronization for data and DOM updates, eliminating the need for DOM difference comparison and delivering a high-performance experience with instant update rendering.
+-   **Official Visual Development IDE**: Joker comes with its own official visual development IDE, which enables rapid development, allowing developers to build interfaces and implement functions more efficiently through visual operations.
+
+### Performance
+
+Joker utilizes specialized rendering logic to map the association between responsive data and the DOM. This enables point-to-point node updates when data changes, bypassing full virtual node redraws and binary tree comparisons—significantly boosting rendering performance.
 
 ![](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/render.png)
 
@@ -24,25 +34,25 @@ Joker uses a special rendering logic to achieve the collection of the associatio
 
 [Detailed Explanation](https://front.jokers.pub/base/render)
 
-## How to Use
+### How to Use
 
-You can use the Joker CLI to create projects, generate application and library code, and perform various continuous development tasks such as testing, packaging, and deployment.
+The Joker CLI facilitates project creation, application and library code generation, and continuous development tasks such as testing, packaging, and deployment.
 
 [Help Documentation](https://front.jokers.pub)
 
-To install the Joker CLI, open the terminal/console window and run the following command:
+To install the Joker CLI, open a terminal/console and execute:
 
 ```
 pnpm i -g @joker.front/cli
 ```
 
-1. Run the CLI command **joker create** and provide the name my-app as a parameter, as follows:
+1. Run the CLI command `joker create` with the project name `my-app`:
 
 ```
 joker create my-app
 ```
 
-2. In the my-app working directory, install the dependencies.
+2. Navigate to the `my-app` directory and install dependencies:
 
 ```
 cd my-app
@@ -50,47 +60,45 @@ cd my-app
 pnpm i
 ```
 
-The CLI will create a new workspace and a simple welcome application, which you can run at any time.
+The CLI will generate a new workspace and a simple welcome application, ready for immediate use.
 
-## Running the Application
+### Running the Application
 
-The Joker CLI includes a server command and a build command. The server command is convenient for you to build and provide application services locally.
+The Joker CLI includes server and build commands. The server command simplifies local application building and service provisioning.
 
-We provide two default commands, `dev` and `build`, representing the development environment and code building respectively.
+Two default commands are provided: `dev` (development environment) and `build` (code building).
 
-1. Navigate to the workspace folder, such as my-app.
+1. Navigate to the workspace folder (e.g., `my-app`):
 
 ```
 cd my-app
 ```
 
-2. Run the following command:
+2. Execute the following command:
 
 ```
 npm run dev
 ```
 
-After running successfully, a simple sample page will be displayed.
+Upon successful execution, a sample page will be displayed.
 
-## Visual Development Tools
+### Visual Development Tools
 
-A front-end framework with built-in visual tools: [Low-code Platform](https://lowcode.jokers.pub)
+A front-end framework with built-in visual tools: [Visual Coding IDE](https://jokers.pub)
 
-![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img4.png)
-![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img2.png)
-![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img1.jpg)
-![Joker Platform](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img3.jpg)
+![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img4.png)
+![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img2.png)
+![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img1.jpg)
+![Joker Visual Coding IDE](https://gitee.com/joker_pub/joker-front-core/raw/main/readme/img3.jpg)
 
-## Documentation
+### Documentation
 
 [Help Documentation](https://front.jokers.pub)
+
+### Related Projects
 
 [Official Website](https://front.jokers.pub)
 
 [Official UI Library](https://ui.jokers.pub)
 
-[Low-code Platform](https://jokers.pub)
-
-## Wechat
-
-![Wechat](https://static.jokers.pub/lowcode/wechat-group.jpg)
+[Joker Visual Coding IDE](https://viscode.jokers.pub)
