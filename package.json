@@ -21,9 +21,9 @@
     "scripts": {
         "test": "jest",
         "test:temp": "jest test/parser/html.spec.ts",
-        "build": "joker_build_library --sourcemap=false",
-        "build:prod": "joker_build_library --sourcemap=false --terser",
-        "release": "npm run test && npm run build && joker_release_library",
+        "build": "node build/index.js",
+        "build:prod": "node build/index.js --terser --sourcemap=false",
+        "release": "npm run test && npm run build && npm publish",
         "release:prod": "npm run test && npm run build:prod && npm publish --access public --registry https://registry.npmjs.org/"
     },
     "author": "Zohar",
