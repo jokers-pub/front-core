@@ -44,7 +44,7 @@
         "url": "git+https://github.com/jokers-pub/front-core.git"
     },
     "devDependencies": {
-        "@joker.front/sfc": "^1.1.26",
+        "@joker.front/sfc": "^1.1.27",
         "@joker.front/shared": "^1.5.32",
         "@types/jest": "^30.0.0",
         "@typescript-eslint/parser": "^8.38.0 ",

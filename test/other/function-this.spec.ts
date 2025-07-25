@@ -39,6 +39,6 @@ describe("方法指针测试", () => {
         let root = document.createElement("div");
         let com = new ParentView();
 
-        expect(() => com.$mount(root)).not.toThrowError();
+        expect(() => com.$mount(root)).not.toThrow();
     });
 });

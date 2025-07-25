@@ -13,8 +13,8 @@ importers:
         version: 1.3.31
     devDependencies:
       '@joker.front/sfc':
-        specifier: ^1.1.26
-        version: 1.1.26
+        specifier: ^1.1.27
+        version: 1.1.27
       '@joker.front/shared':
         specifier: ^1.5.32
         version: 1.5.32
@@ -463,8 +463,8 @@ packages:
   '@joker.front/ast@1.3.31':
     resolution: {integrity: sha512-R3CxXCFVw2wzahQTL91TDItFiHylnhhNhnFHt5ix9EAqla+rVBzCajqthEEeu1RRENTJ01epCUZnYw7Vj7dH1A==}
 
-  '@joker.front/sfc@1.1.26':
-    resolution: {integrity: sha512-ah/AXdRfHOq0cv73f5ipKsXS8fht2a84RFnh0I7MRp7WcbTY77ku1YKMhIkGP2qfbwnpeTxjiFZr+zdPNw4fzw==}
+  '@joker.front/sfc@1.1.27':
+    resolution: {integrity: sha512-PxrQ+MNhjH5w2KBkvqJ90GtIklVtdFK5Nn9uXym+R3uwDvBykqsZoktFPrrfQpxukHSf0IfQ/HLlTyyhHlemEQ==}
 
   '@joker.front/shared@1.5.32':
     resolution: {integrity: sha512-BWcySOUPDtvW+3efSzG2ufriTGV8X87ntkC17NR8vKFQKP2Ip71CI5AYxNmWNHgd6AjfyLa+ttZQQbFqOFiU/Q==}
@@ -2808,7 +2808,7 @@ snapshots:
 
   '@joker.front/ast@1.3.31': {}
 
-  '@joker.front/sfc@1.1.26':
+  '@joker.front/sfc@1.1.27':
     dependencies:
       htmlparser2: 8.0.2
       source-map: 0.7.4
