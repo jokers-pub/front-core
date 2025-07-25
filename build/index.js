@@ -44,6 +44,7 @@ const inputOptions = {
         jsonPlugin(),
         typescript({
             tsconfig: path.join(process.cwd(), "tsconfig.json"),
+            clean: true,
             useTsconfigDeclarationDir: true
         })
     ]
