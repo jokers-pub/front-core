@@ -2,7 +2,7 @@ import { moveUp, remove } from "@joker.front/shared";
 import { observer, defineObserverProperty, ShallowObserver } from "../../src/observer/index";
 import { Watcher } from "../../src/observer/watcher";
 
-describe("watcher 依赖采集", () => {
+describe("Watcher Dependency Collection", () => {
     let id = Symbol.for("testid");
     let source = {
         attr: "v1",
@@ -13,7 +13,7 @@ describe("watcher 依赖采集", () => {
         arry: [1, 2, 3, 4]
     };
 
-    describe("基础", () => {
+    describe("Basic", () => {
         let obj = observer(source, true);
 
         let c1: string = "";
@@ -25,7 +25,7 @@ describe("watcher 依赖采集", () => {
             "attr"
         );
 
-        it("变更监听", () => {
+        it("Change Detection", () => {
             expect(w1.value).toEqual("v1");
 
             let c2: string = "";
@@ -57,7 +57,7 @@ describe("watcher 依赖采集", () => {
             expect(c1 === "v2" && c2 === "2" && c3 === 4).toBe(true);
         });
 
-        it("销毁", () => {
+        it("Destroy", () => {
             w1.destroy();
             c1 = "";
 
@@ -68,7 +68,7 @@ describe("watcher 依赖采集", () => {
         });
     });
 
-    describe("数组", () => {
+    describe("Array", () => {
         let obj = observer(source, true);
 
         let valueChange: number | undefined;
@@ -103,23 +103,23 @@ describe("watcher 依赖采集", () => {
             lengthChange = false;
         }
 
-        it("观察引用关系", () => {
+        it("Observe Reference Relationships", () => {
             expect(watcher.relations.size).toBe(2);
         });
 
-        it("变更", () => {
+        it("Modification", () => {
             obj.arry[2] = 6;
             expect(valueChange === 6 && watcher.value === 6).toBe(true);
         });
 
-        it("增加", () => {
+        it("Addition", () => {
             reset();
 
             obj.arry.push(5);
             expect(valueChange === undefined && arrChange && lengthChange && watcher.value === 6).toBe(true);
         });
 
-        it("删除", () => {
+        it("Deletion", () => {
             reset();
 
             remove(obj.arry, 2);
@@ -127,7 +127,7 @@ describe("watcher 依赖采集", () => {
             expect(valueChange === 4 && arrChange && lengthChange).toBe(true);
         });
 
-        it("整体变更", () => {
+        it("Overall change", () => {
             reset();
 
             obj.arry = [8, 7, 6, 5, 0, 2];
@@ -135,7 +135,7 @@ describe("watcher 依赖采集", () => {
             expect(valueChange === 6 && arrChange && lengthChange).toBe(true);
         });
 
-        it("特殊语法", () => {
+        it("Special Grammar", () => {
             reset();
             obj.arry.unshift(9);
             expect(valueChange === 7 && arrChange && lengthChange).toBe(true);
@@ -153,7 +153,7 @@ describe("watcher 依赖采集", () => {
             expect(valueChange === undefined && !arrChange && !lengthChange).toBe(true);
         });
 
-        it("特殊场景", () => {
+        it("Special Scenarios", () => {
             let arr = observer([]) as number[];
 
             let isChange = false;
@@ -166,12 +166,12 @@ describe("watcher 依赖采集", () => {
 
             arr[1] = 1;
 
-            //无法监听不存在的属性
+            // Cannot observe non-existent properties
             expect(isChange).toBe(false);
         });
     });
 
-    describe("对象", () => {
+    describe("Object", () => {
         let obj = observer(source, true);
         let objChange = false;
 
@@ -197,7 +197,7 @@ describe("watcher 依赖采集", () => {
             objChange = false;
         }
 
-        it("变更", () => {
+        it("Modification", () => {
             obj.obj.a = "2";
 
             expect(watcher.value === "2" && objChange === false).toBe(true);
@@ -207,7 +207,7 @@ describe("watcher 依赖采集", () => {
             expect(valueWatch.value === "4" && objChange === true).toBe(true);
         });
 
-        it("增加", () => {
+        it("Addition", () => {
             reset();
 
             (<any>obj.obj)["b"] = {
@@ -217,7 +217,7 @@ describe("watcher 依赖采集", () => {
             expect(objChange).toBe(true);
         });
 
-        it("值替换", () => {
+        it("Value Replacement", () => {
             reset();
 
             obj.obj = {
@@ -228,7 +228,7 @@ describe("watcher 依赖采集", () => {
             expect(objChange && watcher.value === "3").toBe(true);
         });
 
-        it("其他", () => {
+        it("Others", () => {
             let obj = observer(
                 {
                     temp: {
@@ -254,17 +254,17 @@ describe("watcher 依赖采集", () => {
             obj.temp.a = 3;
             expect(changeCount).toBe(0);
 
-            //新属性
+            //New attribute
             obj.temp.c = 4;
             expect(changeCount).toBe(1);
 
-            //值不变更不触发
+            //No trigger if the value remains unchanged
             obj.temp = obj.temp;
             expect(changeCount).toBe(1);
         });
     });
 
-    describe("Set高级类型", () => {
+    describe("Advanced Types of Set", () => {
         let obj = observer({
             v: new Set<any>()
         });
@@ -289,7 +289,7 @@ describe("watcher 依赖采集", () => {
         obj.v.clear();
         expect(objChange).toBe(true);
 
-        //测试设值 也会数据劫持
+        //Testing setting values will also cause data hijacking.
         objChange = false;
         let obj1 = {
             name: "1"
@@ -307,7 +307,7 @@ describe("watcher 依赖采集", () => {
         expect(objChange).toBe(true);
     });
 
-    describe("Map高级类型", () => {
+    describe("Advanced Types of Map", () => {
         let obj = observer({
             v: new Map<string, any>()
         });
@@ -332,7 +332,7 @@ describe("watcher 依赖采集", () => {
         obj.v.clear();
         expect(objChange).toBe(true);
 
-        //测试设值 也会数据劫持
+        //Testing value assignment will also lead to data hijacking.
         objChange = false;
         let obj1 = {
             name: "1"
@@ -350,7 +350,7 @@ describe("watcher 依赖采集", () => {
         expect(objChange).toBe(true);
     });
 
-    describe("引用劫持检监测", () => {
+    describe("Reference Hijacking Detection and Monitoring", () => {
         let obj = observer(source, true);
         let valueChange = false;
         let objChange = false;
@@ -403,15 +403,15 @@ describe("watcher 依赖采集", () => {
             objChangeCount = 0;
         }
 
-        it("Dep关系是否复用", () => {
+        it("Whether to reuse dependency relationships", () => {
             let watchKeys1 = Array.from(valueWatcher.relations.keys());
             let watchKeys2 = Array.from(valueWatcher2.relations.keys());
 
-            //长度相等，第二位“a“的dep 完全相同，未重复创建
+            //The lengths are equal, and the "dep" of the second "a" is completely the same, with no duplicate creation.
             expect(watchKeys1.length === 2 && watchKeys2.length === 2 && watchKeys1[1] === watchKeys2[1]).toBe(true);
         });
 
-        it("值同步", () => {
+        it("Value Synchronization", () => {
             obj.obj.a = "2";
 
             expect(valueChange && valueChange2 && valueWatcher.value === "2" && valueWatcher2.value === "2").toBe(true);
@@ -422,14 +422,14 @@ describe("watcher 依赖采集", () => {
             expect(valueChange && valueChange2 && valueWatcher.value === "1" && valueWatcher2.value === "1").toBe(true);
         });
 
-        it("值替换", () => {
+        it("Value Replacement", () => {
             reset();
             obj.obj = {
                 a: "4",
                 [id]: "5"
             };
 
-            //clone 的数据属于值替换，上面无监听，所以valueChange2为false
+            //The cloned data is a value replacement, and there is no monitoring on it, so valueChange2 is false.
             expect(
                 objChangeCount === 1 &&
                     valueChange &&
@@ -442,7 +442,7 @@ describe("watcher 依赖采集", () => {
         });
     });
 
-    describe("浅劫持观察", () => {
+    describe("Shallow Proxy Observation", () => {
         let target = new ShallowObserver({ a: 1 });
 
         let isChanged = false;

@@ -1,15 +1,15 @@
 import { Component } from "../../src/component";
 import { getAst, sleep } from "../utils";
 
-describe("if 响应测试", () => {
-    it("双属性同时变更", async () => {
+describe("if reactive test", () => {
+    it("Simultaneous change of two properties", async () => {
         class ParentView extends Component<{
             mini?: boolean;
             codeBlock?: boolean;
             placeholder?: string;
         }> {
             propsOption = {
-                placeholder: "请输入内容"
+                placeholder: "Please enter content"
             };
             model = {
                 value: "",
@@ -39,7 +39,7 @@ describe("if 响应测试", () => {
 
         expect(root.innerHTML).toEqual("");
     });
-    it("频繁值变更", () => {
+    it("Frequent value changes", () => {
         class ParentView extends Component {
             model = {
                 a: true
@@ -68,7 +68,7 @@ describe("if 响应测试", () => {
         com.model.a = false;
         expect(root.innerHTML).toEqual("<span>2</span>");
     });
-    it("基础", () => {
+    it("Basic", () => {
         class ParentView extends Component {
             model: any = {
                 a: {
@@ -93,7 +93,7 @@ describe("if 响应测试", () => {
         com.model.a = undefined;
         expect(root.innerHTML).toEqual("");
     });
-    it("基础1", () => {
+    it("Basic 1", () => {
         class ParentView extends Component {
             model: any = {
                 a: undefined
@@ -137,7 +137,7 @@ describe("if 响应测试", () => {
         expect(root.innerHTML.trim()).toEqual("1");
     });
 
-    it("基础2", () => {
+    it("Basic 2", () => {
         class ParentView extends Component {
             model: any = {
                 a: {

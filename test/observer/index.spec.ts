@@ -6,7 +6,7 @@ import {
     ShallowObserver
 } from "../../src/observer";
 
-describe(`数据劫持`, () => {
+describe(`Data Proxy`, () => {
     let source = {
         total: "20",
         obj: {
@@ -16,7 +16,7 @@ describe(`数据劫持`, () => {
         }
     };
 
-    it("数据守恒-检测数据无污染", () => {
+    it("Data Conservation - Verify no data pollution", () => {
         let obj1 = observer(source);
 
         //@ts-ignore
@@ -25,13 +25,13 @@ describe(`数据劫持`, () => {
         //@ts-ignore
         expect(source[OBJECTPROXY_DEPID] === undefined).toBe(true);
 
-        //重新生成实例
+        //Create new instance
         let obj2 = observer(source);
 
-        //相同劫持数据同步
+        //Proxy data synchronization
         expect(obj1.obj === obj2.obj).toBe(true);
 
-        //clone劫持
+        //Clone proxy
         let obj3 = observer(source, true);
 
         obj2.total = "21";
@@ -39,7 +39,7 @@ describe(`数据劫持`, () => {
         expect(obj3.total).toEqual("20");
     });
 
-    it("重复劫持", () => {
+    it("Repeated Proxy", () => {
         let obj1 = observer(source);
 
         let obj2 = observer(obj1);
@@ -47,7 +47,7 @@ describe(`数据劫持`, () => {
         expect(obj1 === obj2).toBe(true);
     });
 
-    it("浅劫持监听", () => {
+    it("Shallow Proxy Observation", () => {
         expect(new ShallowObserver("1").value).toEqual("1");
         expect(new ShallowObserver(1).value).toEqual(1);
 
@@ -64,7 +64,7 @@ describe(`数据劫持`, () => {
         expect(target.value === source).toBe(false);
     });
 
-    it("数据循环依赖", () => {
+    it("Circular Data Dependency", () => {
         let item = {
             name: "1",
             age: 2,
@@ -81,7 +81,7 @@ describe(`数据劫持`, () => {
         expect(isObserverData(data) && data === data.children[0].parent).toBe(true);
     });
 
-    it("数据劫持，数据丢失测试", () => {
+    it("Data Proxy - Data Loss Test", () => {
         let source = class {
             a = 1;
         };

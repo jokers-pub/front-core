@@ -1,8 +1,8 @@
 import { Component } from "../../src/component";
 import { getAst } from "../utils";
 
-describe("方法指针测试", () => {
-    it("基础", () => {
+describe("Function Pointer Test", () => {
+    it("Basic", () => {
         class ParentView extends Component {
             model = {
                 a: 1

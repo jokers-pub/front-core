@@ -1,6 +1,6 @@
 import { Watcher, combinedReply, observer } from "../../src";
 
-describe("组合回复测试", () => {
+describe("Combined Reply Test", () => {
     let state = observer<{
         list: string[];
         str: string;
@@ -23,7 +23,7 @@ describe("组合回复测试", () => {
         }
     );
 
-    it("无组合回复-list", () => {
+    it("No Combined Reply List", () => {
         listChangeCount = 0;
         state.list.push("1");
         expect(listChangeCount).toEqual(1);
@@ -31,10 +31,10 @@ describe("组合回复测试", () => {
         expect(listChangeCount).toEqual(2);
     });
 
-    it("无组合回复-str", () => {
+    it("No Combined Reply String", () => {
         state.str = "1";
         expect(strChangeCount).toEqual(1);
-        //无变动测试
+        //No Change Test
         state.str = "1";
         expect(strChangeCount).toEqual(1);
 
@@ -42,7 +42,7 @@ describe("组合回复测试", () => {
         expect(strChangeCount).toEqual(2);
     });
 
-    it("组合回复-list", () => {
+    it("Combined Reply List", () => {
         combinedReply(() => {
             state.list.push("1");
             expect(listChangeCount).toEqual(2);
@@ -52,33 +52,33 @@ describe("组合回复测试", () => {
         expect(listChangeCount).toEqual(3);
     });
 
-    it("组合回复-str（无变更）", () => {
+    it("Combined Reply String (No Change)", () => {
         combinedReply(() => {
             state.str = "1";
             expect(strChangeCount).toEqual(2);
-            //无变动测试
+            //No Change Test
             state.str = "1";
             expect(strChangeCount).toEqual(2);
 
             state.str = "2";
             expect(strChangeCount).toEqual(2);
         });
-        //值是2未变更
+        //The value is 2 and has not changed.
         expect(strChangeCount).toEqual(2);
     });
 
-    it("组合回复-str（变更）", () => {
+    it("Combined Reply String (With Changes)", () => {
         combinedReply(() => {
             state.str = "1";
             expect(strChangeCount).toEqual(2);
-            //无变动测试
+            //No change test
             state.str = "1";
             expect(strChangeCount).toEqual(2);
 
             state.str = "3";
             expect(strChangeCount).toEqual(2);
         });
-        //值是2未变更
+        //The value is 2 and has not changed.
         expect(strChangeCount).toEqual(3);
     });
 });

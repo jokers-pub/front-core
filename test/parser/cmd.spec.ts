@@ -19,7 +19,7 @@ describe("parser-cmd", () => {
             return this.model.time + "1";
         }
     }
-    it("基础Html", () => {
+    it("Basic Html", () => {
         let data = new Source();
 
         let root = mountAst(`<div>@model.time @Html(model.time)</div>`, data);
@@ -92,7 +92,7 @@ describe("parser-cmd", () => {
         expect(root.innerHTML).toEqual("");
     });
 
-    it("if-测试相邻if互不影响", () => {
+    it("if - test adjacent if blocks are independent", () => {
         let data1 = new Source();
         let root1 = mountAst(
             `
@@ -168,7 +168,7 @@ describe("parser-cmd", () => {
         expect(root.innerHTML).toEqual(`<p>0</p><p>1</p><p>4</p><p>3</p><p>6</p><p>7</p>`);
     });
 
-    it("嵌套循环", () => {
+    it("Nested loop", () => {
         let data = new Source();
 
         let root = mountAst(

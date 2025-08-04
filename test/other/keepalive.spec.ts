@@ -3,7 +3,7 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 
 describe("keepalive", () => {
-    it("基础", () => {
+    it("Basic", () => {
         class ParentView extends Component {
             isKeepAlive = true;
             model = {
@@ -28,12 +28,12 @@ describe("keepalive", () => {
         expect(root.innerHTML).toEqual("");
         component.$mount(root);
         expect(root.innerHTML).toEqual("<span>1</span>");
-        //强制销毁
+        // Force destroy
         component.$destroy(true);
         expect(root.innerHTML).toEqual("");
     });
 
-    it("响应", async () => {
+    it("Reactive", async () => {
         class ParentView extends Component {
             public component?: Component;
             public async test() {
@@ -74,7 +74,7 @@ describe("keepalive", () => {
         `);
             };
 
-            //验证sleep 事件透传
+            // Verify sleep event passthrough
             sleeped() {
                 this.model.time++;
             }
@@ -89,12 +89,12 @@ describe("keepalive", () => {
 
         await component.test();
         expect(root.innerHTML).toEqual("<span>1</span><span>1</span>");
-        //强制销毁
+        // Force destroy
         component.component?.$destroy(true);
         expect(root.innerHTML).toEqual("");
     });
 
-    it("组件嵌套使用", async () => {
+    it("Component nesting usage", async () => {
         class ParentView extends Component {
             public components = {
                 ChildrenView,
@@ -109,7 +109,7 @@ describe("keepalive", () => {
                     @if(model.show){
                         <ChildrenView keep-alive>
                             <ChildrenView2></ChildrenView2>
-                        </Children2View>
+                        </ChildrenView>
                     }
                 `
                 );
@@ -162,13 +162,13 @@ describe("keepalive", () => {
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
         expect(root.innerHTML).toEqual('<span>1</span><div class="container"><span>1</span></div>');
-        //测试销毁再挂载是否keepalive
+        // Test whether keepalive works after destroy and remount
         component.model.show = false;
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
         expect(root.innerHTML).toEqual('<span>2</span><div class="container"><span>2</span></div>');
 
-        //复测
+        // Retest
         component.model.show = false;
         component.model.show = true;
         expect(root.innerHTML).toEqual('<span>3</span><div class="container"><span>3</span></div>');
@@ -177,7 +177,7 @@ describe("keepalive", () => {
         expect(root.innerHTML).toEqual("");
     });
 
-    it("命令组合使用", () => {
+    it("Command combination usage", () => {
         class Parent2View extends Component {
             public components = {
                 Children2View
@@ -219,13 +219,13 @@ describe("keepalive", () => {
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
         expect(root.innerHTML).toEqual("<span>1</span>");
-        //测试销毁再挂载是否keepalive
+        // Test whether keepalive works after destroy and remount
         component.model.show = false;
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
         expect(root.innerHTML).toEqual("<span>2</span>");
 
-        //复测
+        // Retest
         component.model.show = false;
         component.model.show = true;
         expect(root.innerHTML).toEqual("<span>3</span>");
@@ -234,7 +234,7 @@ describe("keepalive", () => {
         expect(root.innerHTML).toEqual("");
     });
 
-    it("睡眠数据更新穿透", () => {
+    it("Sleep data update penetration", () => {
         class ParentView extends Component {
             public components = {
                 ChildrenView
@@ -250,7 +250,7 @@ describe("keepalive", () => {
                         <ChildrenView keep-alive time="@model.time"></Children2View>
                     }
                     @if(model.time>1){
-                        <span>动态0</span>
+                        <span>dynamic0</span>
                     }
                 `
                 );
@@ -275,7 +275,7 @@ describe("keepalive", () => {
             </div>
             }
             @if(props.time>1){
-                <span>动态1</span>
+                <span>dynamic1</span>
             }
         `);
             };
@@ -300,7 +300,7 @@ describe("keepalive", () => {
                 return getAst(`
             <span>@model.time | @props.time</span>
             @if(props.time>1){
-                <span>动态2</span>
+                <span>dynamic2</span>
             }
         `);
             };
@@ -317,7 +317,7 @@ describe("keepalive", () => {
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
         expect(root.innerHTML).toEqual('<span>1 | 0</span><div class="container"><span>1 | 0</span></div>');
-        //测试销毁再挂载是否keepalive
+        // Test whether keepalive works after destroy and remount
         component.model.show = false;
         expect(root.innerHTML).toEqual("");
         component.model.time++;
@@ -325,13 +325,13 @@ describe("keepalive", () => {
         component.model.show = true;
         expect(root.innerHTML).toEqual('<span>2 | 1</span><div class="container"><span>2 | 1</span></div>');
 
-        //复测
+        // Retest
         component.model.show = false;
         component.model.time++;
         expect(root.innerHTML).toEqual("");
         component.model.show = true;
         expect(root.innerHTML).toEqual(
-            '<span>3 | 2</span><div class="container"><span>3 | 2</span><span>动态2</span></div><span>动态1</span><span>动态0</span>'
+            '<span>3 | 2</span><div class="container"><span>3 | 2</span><span>dynamic2</span></div><span>dynamic1</span><span>dynamic0</span>'
         );
 
         component.$destroy(true);

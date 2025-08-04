@@ -8,19 +8,19 @@ test("parser-comment", async () => {
 
     let root = await mountAst(
         `
-    // 这事一个注释
+    // This is a comment
     /**
-     * 代码注释最重要
+     * Code comments are the most important
      */
-    <!-- 我也是一个注释 -->
+    <!-- I am also a comment -->
     `,
         new Source()
     );
 
     expect(root.innerHTML).toEqual(`
-    // 这事一个注释
+    // This is a comment
     /**
-     * 代码注释最重要
+     * Code comments are the most important
      */
-    <!-- 我也是一个注释 -->`);
+    <!-- I am also a comment -->`);
 });

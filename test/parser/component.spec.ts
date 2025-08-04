@@ -77,7 +77,7 @@ class HMRComponent extends Component {
 }
 
 describe("parser-component", () => {
-    it("基础", () => {
+    it("Basic", () => {
         let root = document.createElement("div");
 
         let view = new ParentView().$mount(root);
@@ -102,19 +102,19 @@ describe("parser-component", () => {
 
         expect(view.model.test1).toEqual("aaaaa");
 
-        //once修饰检测
+        //once modifier check
         (<HTMLSpanElement>selfEle).click();
 
         expect(root.innerHTML).toEqual(
             `<div data-scoped-3333=""><p class="demo">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">2</b></span></p>XXX</div>`
         );
 
-        //销毁
+        //destroy
         view.$destroy();
         expect(root.innerHTML).toEqual("");
     });
 
-    it("热重载", () => {
+    it("Hot Reload", () => {
         let root = document.createElement("div");
 
         let view = new HMRComponent().$mount(root);

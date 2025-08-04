@@ -2,8 +2,8 @@ import { moveDown, moveUp, remove, removeFilter } from "@joker.front/shared";
 import { combinedReply, Component, VNode } from "../../src";
 import { getAst } from "../utils";
 
-describe("FOR循环更新测试", () => {
-    it("基础", async () => {
+describe("FOR loop update test", () => {
+    it("Basic", async () => {
         class View extends Component {
             model = {
                 list: [{ id: 1 }, { id: 2 }, { id: 3 }]
@@ -84,7 +84,7 @@ describe("FOR循环更新测试", () => {
         expect(root.innerHTML).toEqual("<span>3</span><span>2</span><span>333</span><span>3</span><span>4</span>");
     });
 
-    it("带索引", () => {
+    it("With Index", () => {
         class View extends Component {
             model = {
                 list: [{ id: 1 }, { id: 2 }, { id: 3 }]
@@ -109,7 +109,7 @@ describe("FOR循环更新测试", () => {
         expect(root.innerHTML).toEqual("<span>2</span><span>x</span>");
     });
 
-    it("混合模式", async () => {
+    it("Mixed Mode", async () => {
         class View extends Component {
             model = {
                 list: [{ id: 1 }, { id: 2 }, { id: 3 }]

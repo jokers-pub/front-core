@@ -2,8 +2,8 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 import { VNode, observer } from "../../src";
 
-describe("parser时db污染溯源问题", () => {
-    it("基础", async () => {
+describe("Traceability of db pollution during parser", () => {
+    it("Basic", async () => {
         class ParentView extends Component {
             list = [1];
             val?: number;

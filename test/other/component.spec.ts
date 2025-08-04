@@ -5,7 +5,7 @@ import { Component, ComponentContainer } from "../../src/component";
 import { getAst } from "../utils";
 
 describe("template", () => {
-    it("基础", async () => {
+    it("Basic", async () => {
         class ParentView extends Component {
             template = function () {
                 return getAst(`
@@ -38,7 +38,7 @@ describe("template", () => {
         class ChildrenView extends Component {
             template = function () {
                 return getAst(`
-                <span>我是组件1</span>
+                <span>I am Component 1</span>
                 `);
             };
         }
@@ -46,7 +46,7 @@ describe("template", () => {
         class ChildrenView2 extends Component<{ param: string }> {
             template = function () {
                 return getAst(`
-                <span>我是组件2+@props.param</span>
+                <span>I am Component 2+@props.param</span>
                 `);
             };
         }
@@ -57,16 +57,16 @@ describe("template", () => {
 
         component.test2();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件2+Zohar</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 2+Zohar</span>");
 
         component.test3();
-        expect(root.innerHTML).toEqual("<span>我是组件2+hello</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 2+hello</span>");
 
         component.$destroy();
         expect(root.innerHTML).toEqual("");
     });
 
-    it("保活", async () => {
+    it("Keep-alive", async () => {
         class ParentView extends Component {
             template = function () {
                 return getAst(`
@@ -94,7 +94,7 @@ describe("template", () => {
         class ChildrenView extends Component {
             template = function () {
                 return getAst(`
-                <span>我是组件1@model.time</span>
+                <span>I am Component 1@model.time</span>
                 `);
             };
 
@@ -110,7 +110,7 @@ describe("template", () => {
         class ChildrenView2 extends Component {
             template = function () {
                 return getAst(`
-                <span>我是组件2@model.time</span>
+                <span>I am Component 2@model.time</span>
                 `);
             };
             model = {
@@ -127,37 +127,37 @@ describe("template", () => {
 
         component.test();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件10</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 10</span>");
 
         component.test2();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件20</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 20</span>");
 
         component.test();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件11</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 11</span>");
 
         component.test2();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件21</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 21</span>");
 
-        //清除ChildrenView 缓存
+        //Clear the ChildrenView cache
         component.$getRef<VNode.Component<ComponentContainer>>("cmp")?.component?.removeCache("ChildrenView");
 
         component.test();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件10</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 10</span>");
 
         component.test2();
         await sleep(100);
-        expect(root.innerHTML).toEqual("<span>我是组件22</span>");
+        expect(root.innerHTML).toEqual("<span>I am Component 22</span>");
 
         component.$destroy();
         expect(root.innerHTML).toEqual("");
     });
 
-    it("容器穿透渲染", () => {
-        //主要测试，插槽作为参数穿透传递渲染，非常规
+    it("Container Penetration Rendering", () => {
+        //Main test: slots are passed through as parameters for rendering, which is unconventional.
         class Com1 extends Component {
             template = function () {
                 return getAst(`
@@ -192,8 +192,8 @@ describe("template", () => {
         expect(root.innerHTML).toEqual("<span><b>1</b></span>");
     });
 
-    it("容器子区域加载", () => {
-        //主要测试，插槽作为参数穿透传递渲染，非常规
+    it("Container Sub-area Loading", () => {
+        //Main test: Slots are passed through as parameters for rendering, which is unconventional.
         class Com1 extends Component {
             model = {
                 arr: [{ childrens: [1] }]
@@ -233,8 +233,8 @@ describe("template", () => {
         expect(root.innerHTML).toEqual("<span><b>1</b><b>2</b></span>");
     });
 
-    it("ref 异步组件加载验证", async () => {
-        //主要测试，插槽作为参数穿透传递渲染，非常规
+    it("ref Asynchronous Component Loading Verification", async () => {
+        //Main test: Slots are passed through as parameters for rendering, which is unconventional.
         let test = 0;
         class Com1 extends Component {
             model = {

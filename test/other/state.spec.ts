@@ -2,8 +2,8 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 import { observer } from "../../src";
 
-describe("状态管理", () => {
-    it("基础", () => {
+describe("State Management", () => {
+    it("Basic", () => {
         let state = observer<{
             list: string[];
         }>({ list: [] });
