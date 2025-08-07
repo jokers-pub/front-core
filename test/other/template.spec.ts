@@ -2,7 +2,7 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 
 describe("template", () => {
-    it("基础", () => {
+    it("Basic", () => {
         class ParentView extends Component {
             template = function () {
                 return getAst(`
@@ -35,7 +35,7 @@ describe("template", () => {
         expect(root.innerHTML).toEqual("<input><span>0</span>");
     });
 
-    it("keepalive 保活", () => {
+    it("keepalive persistence", () => {
         class Parent2View extends Component {
             public components = {
                 Children2View
@@ -81,14 +81,14 @@ describe("template", () => {
 
         expect(root.innerHTML.trim()).toEqual("1234<span>1</span>");
 
-        //测试销毁再挂载是否keepalive
+        //Test whether keepalive works when destroyed and then remounted.
         component.model.show = false;
         expect(root.innerHTML.trim()).toEqual("");
 
         component.model.show = true;
         expect(root.innerHTML.trim()).toEqual("1234<span>2</span>");
 
-        //复测
+        //Retest
         component.model.show = false;
         component.model.show = true;
         expect(root.innerHTML.trim()).toEqual("1234<span>3</span>");

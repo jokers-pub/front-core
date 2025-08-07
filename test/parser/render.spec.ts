@@ -2,7 +2,7 @@ import { Component } from "../../src";
 import { getAst } from "../utils";
 
 describe("render", () => {
-    it("append-to-element验证", () => {
+    it("append-to-element verification", () => {
         class View extends Component {
             model = {
                 show: false
@@ -43,7 +43,7 @@ describe("render", () => {
         expect(document.body.innerHTML).toEqual("<div></div>");
     });
 
-    it("append-to-component验证", () => {
+    it("append-to-component verification", () => {
         document.body.innerHTML = "";
         class View extends Component {
             model = {

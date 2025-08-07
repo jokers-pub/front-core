@@ -4,7 +4,7 @@ import { mountAst, sleep } from "../utils";
 
 class Source extends Component {
     model = {
-        attr1: "测试一下",
+        attr1: "Test once",
         attr2: 3,
         class1: "v3",
         booleanVal: false
@@ -19,7 +19,7 @@ class Source extends Component {
 }
 
 describe("parser-element", () => {
-    it("基础", () => {
+    it("Basic", () => {
         let data = new Source();
 
         let root = mountAst(
@@ -27,24 +27,24 @@ describe("parser-element", () => {
             data
         );
 
-        expect(root.innerHTML).toEqual(`<div name="测试一下" age="4" class="className v3">123</div>`);
+        expect(root.innerHTML).toEqual(`<div name="Test once" age="4" class="className v3">123</div>`);
 
         let div = root.querySelector("div")!;
 
         div.click();
 
-        expect(root.innerHTML).toEqual(`<div name="测试一下" age="4" class="className event1">123</div>`);
+        expect(root.innerHTML).toEqual(`<div name="Test once" age="4" class="className event1">123</div>`);
 
         div.dispatchEvent(new CustomEvent("tap"));
 
-        expect(root.innerHTML).toEqual(`<div name="测试一下" age="4" class="className 2">123</div>`);
+        expect(root.innerHTML).toEqual(`<div name="Test once" age="4" class="className 2">123</div>`);
 
-        data.model.attr1 = "测试两下";
+        data.model.attr1 = "Test twice";
 
-        expect(root.innerHTML).toEqual(`<div name="测试两下" age="4" class="className 2">123</div>`);
+        expect(root.innerHTML).toEqual(`<div name="Test twice" age="4" class="className 2">123</div>`);
     });
 
-    it("优化class值空格", () => {
+    it("Optimize class value spaces", () => {
         let data = new Source();
 
         let root = mountAst(`<div a="s  s     s  " class="s  s     s  ">123</div>`, data);
@@ -52,21 +52,21 @@ describe("parser-element", () => {
         expect(root.innerHTML).toEqual(`<div a="s  s     s" class="s s s">123</div>`);
     });
 
-    it("组合动态属性", () => {
+    it("Combined dynamic attributes", () => {
         let data = new Source();
 
         let root = mountAst(`<div name=" @model.attr1 hh@model.attr1 @(model.attr2)"></div>`, data);
 
-        expect(root.innerHTML).toEqual(`<div name="测试一下 hh测试一下 3"></div>`);
+        expect(root.innerHTML).toEqual(`<div name="Test once hhTest once 3"></div>`);
     });
 
-    it("空载方法", () => {
+    it("Empty method", () => {
         let data = new Source();
 
         expect(() => mountAst(`<div @keydown.stop>123</div>`, data)).not.toThrow();
     });
 
-    it("class style 语法糖", () => {
+    it("class style syntactic sugar", () => {
         let data = new Source();
 
         let root = mountAst(

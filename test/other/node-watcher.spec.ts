@@ -3,7 +3,7 @@ import { Component } from "../../src/component";
 import { getAst } from "../utils";
 
 describe("keepalive", () => {
-    it("基础", async () => {
+    it("Basic", async () => {
         class ParentView extends Component {
             model = {
                 className: "a"

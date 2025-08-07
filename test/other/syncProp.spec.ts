@@ -1,8 +1,8 @@
 import { Component, ShallowObserver, VNode } from "../../src";
 import { getAst } from "../utils";
 
-describe("同步pros", () => {
-    it("基础功能测试", async () => {
+describe("Sync props", () => {
+    it("Basic functionality test", async () => {
         class ParentView extends Component<{ value: string }> {
             model = {
                 temp: ""

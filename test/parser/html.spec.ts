@@ -3,7 +3,7 @@ import { mountAst } from "../utils";
 class SourceView extends Component {
     [SCOPE_ID] = "xxxxx";
     model = {
-        content: "哈哈哈哈哈哈<i></i>"
+        content: "Hahahahahaha<i></i>"
     };
 }
 describe("html", () => {
@@ -12,7 +12,7 @@ describe("html", () => {
 
         let root = mountAst(`@Html(model.content)`, view);
 
-        //开启沙箱 无法判断内部文本
+        //Enabling the sandbox makes it impossible to judge the internal text.
         expect(root.innerHTML).toBe('<joker-html-shadow style="line-height: 1;"></joker-html-shadow>');
 
         view.model.content = "<div>1</div>";
@@ -23,12 +23,12 @@ describe("html", () => {
     test("parser-html", () => {
         let view = new SourceView();
 
-        //测试 scoped
+        //Test scoped
         let root = mountAst(`@Html(model.content,true)`, view);
 
-        //开启沙箱 无法判断内部文本
+        //Enabling the sandbox makes it impossible to judge the internal text.
         expect(root.innerHTML).toBe(
-            '<joker-html-container data-scoped-xxxxx="">哈哈哈哈哈哈<i data-scoped-xxxxx=""></i></joker-html-container>'
+            '<joker-html-container data-scoped-xxxxx="">Hahahahahaha<i data-scoped-xxxxx=""></i></joker-html-container>'
         );
 
         view.model.content = "<div>1</div>";

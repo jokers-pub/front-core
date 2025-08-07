@@ -2,8 +2,8 @@ import { sleep } from "@joker.front/shared";
 import { Component, VNode } from "../../src";
 import { getAst } from "../utils";
 
-describe("组件事件", () => {
-    it("基础", async () => {
+describe("Component Events", () => {
+    it("Basic", async () => {
         let tempVal = "";
         let mounted = false;
         let destroy = false;
@@ -42,7 +42,7 @@ describe("组件事件", () => {
         component.$destroy(true);
         expect(destroy).toEqual(true);
 
-        //验证事件不再广播
+        //Verify that the event is no longer broadcast.
         component.test("33");
         expect(tempVal).toEqual("22");
     });
