@@ -274,17 +274,19 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         callBack?: Function,
         type?: "transition" | "animation"
     ): void {
-        if (typeof nodeOrRef === "string") {
-            let vnode = this.$getRef(nodeOrRef);
+        if (this.$root && !this[IS_DESTROY]) {
+            if (typeof nodeOrRef === "string") {
+                let vnode = this.$getRef(nodeOrRef);
 
-            if (vnode) {
-                nodeOrRef = vnode;
-            } else {
-                logger.warn(LOGTAG, `Node with ref=${nodeOrRef} not found when executing node animation`);
-                return;
+                if (vnode) {
+                    nodeOrRef = vnode;
+                } else {
+                    logger.warn(LOGTAG, `Node with ref=${nodeOrRef} not found when executing node animation`);
+                    return;
+                }
             }
+            this[PARSER_TEMPLATE_TARGET]?.nodeTransition(nodeOrRef, mode, name, callBack, type);
         }
-        this[PARSER_TEMPLATE_TARGET]?.nodeTransition(nodeOrRef, mode, name, callBack, type);
     }
 
     /**
