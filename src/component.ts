@@ -280,7 +280,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             if (vnode) {
                 nodeOrRef = vnode;
             } else {
-                logger.error(LOGTAG, `Node with ref=${nodeOrRef} not found when executing node animation`);
+                logger.warn(LOGTAG, `Node with ref=${nodeOrRef} not found when executing node animation`);
                 return;
             }
         }
