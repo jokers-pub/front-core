@@ -20,7 +20,7 @@
     ],
     "scripts": {
         "test": "jest",
-        "test:temp": "jest test/parser/html.spec.ts",
+        "test:temp": "jest test/parser/element.spec.ts",
         "build": "node build/index.js",
         "build:prod": "node build/index.js --terser --sourcemap=false",
         "release": "npm run test && npm run build && npm publish",

@@ -546,31 +546,9 @@ export namespace Render {
             }
 
             if (attrName === "class") {
-                if (Array.isArray(attrVal)) {
-                    const newClass: string[] = [];
-                    for (const val of attrVal) {
-                        if (isObject(val)) {
-                            for (const name in val) {
-                                if (val[name]) {
-                                    newClass.push(name);
-                                }
-                            }
-                        } else {
-                            val && newClass.push(val);
-                        }
-                    }
+                if (attrVal) {
+                    let newClass = flatClassValues(attrVal);
                     attrVal = newClass.join(" ");
-                } else if (isObject(attrVal)) {
-                    for (const name in attrVal) {
-                        const trimmedName = name.trim();
-                        if (!trimmedName) continue;
-                        if (attrVal[name]) {
-                            el.classList.add(trimmedName);
-                        } else {
-                            el.classList.remove(trimmedName);
-                        }
-                    }
-                    return;
                 }
             } else if (attrName === "style" && isObject(attrVal)) {
                 el.removeAttribute("style");
@@ -800,4 +778,28 @@ function addDataScopedAttribute(element: HTMLElement, scoped: string) {
             addDataScopedAttribute(childElement, scoped);
         }
     }
+}
+
+function flatClassValues(value: any, _result?: string[]): string[] {
+    const result: string[] = _result || [];
+
+    if (typeof value === "string") {
+        const trimmedClass = value.trim();
+
+        if (trimmedClass && !result.includes(trimmedClass)) {
+            result.push(trimmedClass);
+        }
+    } else if (Array.isArray(value)) {
+        value.forEach((item) => flatClassValues(item, result));
+    } else if (value !== null && typeof value === "object") {
+        Object.entries(value).forEach(([key, val]) => {
+            if (val === true) {
+                const trimmedKey = key.trim();
+                if (trimmedKey && !result.includes(trimmedKey)) {
+                    result.push(trimmedKey);
+                }
+            }
+        });
+    }
+    return result;
 }

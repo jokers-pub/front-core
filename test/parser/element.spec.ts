@@ -95,4 +95,14 @@ describe("parser-element", () => {
             '<div class="ssss booleanVal self-attr custom-attr" style="color: red; display: none;"></div>'
         );
     });
+
+    it("test class", () => {
+        let data = new Source();
+        let root = mountAst(
+            `<div class="@(['class1',['class2','class3',{class5:true}],{'class4':true}])"></div>`,
+            data
+        );
+
+        expect(root.innerHTML).toEqual('<div class="class1 class2 class3 class5 class4"></div>');
+    });
 });
