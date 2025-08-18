@@ -418,6 +418,7 @@ export namespace Render {
                     event.callBack({
                         eventName,
                         event: e,
+                        //@ts-ignore
                         target: node,
                         preventDefault: () => e.preventDefault(),
                         stopPropagation: () => e.stopPropagation(),

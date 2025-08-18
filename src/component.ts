@@ -500,6 +500,25 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             }
         }
     }
+    public get $listeners() {
+        let result: Record<string, VNode.EventCallBack<any>[]> = {};
+
+        for (let eventName in this[EVENT_DATA_KEY]) {
+            result[eventName] ||= [];
+
+            result[eventName].push(...Array.from(this[EVENT_DATA_KEY].get(eventName) || []));
+        }
+
+        if (this.$root && this.$root instanceof VNode.Component) {
+            for (let event of this.$root.events) {
+                let eventName = event[0];
+                result[eventName] ||= [];
+                result[eventName].push(event[1].callBack);
+            }
+        }
+
+        return result;
+    }
     /**
      * Trigger event
      * @param eventName Event name
@@ -517,6 +536,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             stopPropagation: targetEvent?.stopPropagation ?? (() => {}),
             preventDefault: targetEvent?.preventDefault ?? (() => {}),
             data: param,
+            //@ts-ignore
             target: targetEvent?.target ?? this.$rootVNode,
             event: targetEvent?.event
         };

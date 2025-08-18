@@ -247,7 +247,7 @@ export namespace VNode {
         }
     }
 
-    export type Event<T = undefined, N extends VNode.Node = VNode.Element | VNode.Component | VNode.Root> = {
+    export type Event<T = undefined, N extends VNode.Node = VNode.Element & VNode.Component> = {
         /**
          * Event name
          */

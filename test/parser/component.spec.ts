@@ -40,7 +40,7 @@ class ChildrenView extends Component<{ time: number; p2: string; booleanValue: b
 
     template = function (h: any) {
         return getAst(`
-        <p class='demo'>
+        <p class='demo @($listeners.v1Change?'v1':'')' >
             @props.time + @props.p2
             @RenderSection()
 
@@ -83,7 +83,7 @@ describe("parser-component", () => {
         let view = new ParentView().$mount(root);
 
         expect(root.innerHTML).toEqual(
-            `<div data-scoped-3333=""><p class="demo">3 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">1</b></span></p>XXX</div>`
+            `<div data-scoped-3333=""><p class="demo v1">3 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">1</b></span></p>XXX</div>`
         );
 
         view.model.time = 4;
