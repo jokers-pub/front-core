@@ -89,7 +89,7 @@ describe("parser-component", () => {
         view.model.time = 4;
 
         expect(root.innerHTML).toEqual(
-            `<div data-scoped-3333=""><p class="demo">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">1</b></span></p>XXX</div>`
+            `<div data-scoped-3333=""><p class="demo v1">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">1</b></span></p>XXX</div>`
         );
 
         let selfEle = root.querySelector(".self");
@@ -97,7 +97,7 @@ describe("parser-component", () => {
         (<HTMLSpanElement>selfEle).click();
 
         expect(root.innerHTML).toEqual(
-            `<div data-scoped-3333=""><p class="demo">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">2</b></span></p>XXX</div>`
+            `<div data-scoped-3333=""><p class="demo v1">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">2</b></span></p>XXX</div>`
         );
 
         expect(view.model.test1).toEqual("aaaaa");
@@ -106,7 +106,7 @@ describe("parser-component", () => {
         (<HTMLSpanElement>selfEle).click();
 
         expect(root.innerHTML).toEqual(
-            `<div data-scoped-3333=""><p class="demo">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">2</b></span></p>XXX</div>`
+            `<div data-scoped-3333=""><p class="demo v1">4 + 2<span data-scoped-3333="">1</span><span class="self"><b data-scoped-3333="">2</b></span></p>XXX</div>`
         );
 
         //destroy
