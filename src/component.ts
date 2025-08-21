@@ -502,6 +502,9 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
             }
         }
     }
+    /**
+     * Event Listeners
+     */
     public get $listeners() {
         let result: Record<string, VNode.EventCallBack<any>[]> = {};
 
