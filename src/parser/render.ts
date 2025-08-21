@@ -794,7 +794,7 @@ function flatClassValues(value: any, _result?: string[]): string[] {
         value.forEach((item) => flatClassValues(item, result));
     } else if (value !== null && typeof value === "object") {
         Object.entries(value).forEach(([key, val]) => {
-            if (val === true) {
+            if (val) {
                 const trimmedKey = key.trim();
                 if (trimmedKey && !result.includes(trimmedKey)) {
                     result.push(trimmedKey);
