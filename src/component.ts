@@ -83,7 +83,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
     /**
      * Mount root
      */
-    public $root: any;
+    public $root?: VNode.Component & HTMLElement;
 
     /**
      * Whether it is slept
