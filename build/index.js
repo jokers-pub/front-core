@@ -66,7 +66,20 @@ const cjsOutputOptions = {
     format: "cjs"
 };
 
+function cleanDist() {
+    const distPath = path.resolve("dist");
+
+    // 直接删除整个dist目录（包括内容）
+    if (fs.existsSync(distPath)) {
+        fs.rmSync(distPath, { recursive: true, force: true });
+    }
+
+    // 确保dist目录存在
+    fs.mkdirSync(distPath, { recursive: true });
+}
+
 async function build() {
+    cleanDist();
     // Create a separate bundle for ES format
     if (!args.format || args.format === "es") {
         const esBundle = await rollup({
