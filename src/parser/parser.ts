@@ -62,7 +62,6 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      * 销毁流程
      */
     public destroy(keepalive?: boolean) {
-        //避免重复销毁
         if (this.isDestroy) return;
         this.isDestroy = true;
         //优先移除watcher关系
@@ -116,7 +115,6 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
     }
 
     public destroyWathcers() {
-        this.isDestroy = true;
         this.clearWatchers();
         //消除所有子集的watcher监听
         this.destroyChildrensWatcher(this.node);
@@ -127,7 +125,15 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
 
         this.node = undefined;
 
-        this.parent = <any>undefined;
+        //@ts-ignore
+        this.parent = undefined;
+
+        //@ts-ignore
+        this.ast = undefined;
+        //@ts-ignore
+        this.ob = undefined;
+        //@ts-ignore
+        this.ext = undefined;
     }
 
     /**

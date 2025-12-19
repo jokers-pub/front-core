@@ -186,9 +186,11 @@ export class Watcher<T extends object = any> {
 
         this.relations.clear();
         this.runRelations.clear();
+
         this.ob = <any>undefined;
         this.value = undefined;
         this.getter = <any>undefined;
+        this.updateCallBack = <any>undefined;
     }
 
     private clearnDeps() {

@@ -315,6 +315,7 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
         this[PRIVATE_WATCHERS].length = 0;
 
+        //先清除响应式，再执行销毁前的周期
         this[PARSER_TEMPLATE_TARGET]?.destroyWathcers();
         //#endregion
 
