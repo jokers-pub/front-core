@@ -1,7 +1,7 @@
 import { AST, EXPRESSHANDLERTAG } from "@joker.front/ast";
 import { isEmptyStr, logger, noop, remove } from "@joker.front/shared";
 import { IParser } from "./parser";
-import { JOKER_COMPONENT_TAG, getGlobalComponent } from "../component";
+import { IS_DESTROY, JOKER_COMPONENT_TAG, getGlobalComponent } from "../component";
 import { Component, SectionType } from "../component";
 import { observer } from "../observer";
 
@@ -319,6 +319,8 @@ export class ParserComponent extends IParser<
             this.ext.promiseQueue.delete(this.loadPromise);
             this.loadPromise = undefined;
         }
+
+        if (this.node?.component[IS_DESTROY]) return;
         if (keepalive === true && this.node?.component?.isKeepAlive) {
             this.node?.component?.$destroy();
         } else {
