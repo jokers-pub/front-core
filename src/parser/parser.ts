@@ -62,6 +62,8 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      * 销毁流程
      */
     public destroy(keepalive?: boolean) {
+        //避免重复销毁
+        if (this.isDestroy) return;
         this.isDestroy = true;
         //优先移除watcher关系
         this.clearWatchers();
