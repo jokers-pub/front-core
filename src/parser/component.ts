@@ -139,6 +139,8 @@ export class ParserComponent extends IParser<
                     {
                         modifiers: event.modifiers,
                         callBack: (e) => {
+                            if (!this.node) return;
+
                             let eventParams: Array<any> = [];
 
                             if (event.functionParam) {
@@ -169,7 +171,7 @@ export class ParserComponent extends IParser<
     }
 
     private async renderChildren() {
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             if ("tagName" in this.ast) {
                 let component = this.ob.components[this.ast.tagName] || getGlobalComponent(this.ast.tagName);
                 if (component === undefined) {
@@ -321,6 +323,8 @@ export class ParserComponent extends IParser<
         }
 
         if (this.node?.component?.[IS_DESTROY]) return;
+        this.node && (this.node.events.length = 0);
+
         if (keepalive === true && this.node?.component?.isKeepAlive) {
             this.node?.component?.$destroy();
         } else {
