@@ -320,7 +320,7 @@ export class ParserComponent extends IParser<
             this.loadPromise = undefined;
         }
 
-        if (this.node?.component[IS_DESTROY]) return;
+        if (this.node?.component?.[IS_DESTROY]) return;
         if (keepalive === true && this.node?.component?.isKeepAlive) {
             this.node?.component?.$destroy();
         } else {
