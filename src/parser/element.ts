@@ -75,7 +75,7 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                         modifiers: event.modifiers,
                         callBack: (e) => {
                             //如果空方法，不做异常处理，为事件挡板做兼容，例如：@keydown.stop
-                            if (eventCallBack === undefined) {
+                            if (eventCallBack === undefined || !this.ext) {
                                 return;
                             }
 
@@ -94,9 +94,7 @@ export class ParserElement extends IParser<AST.Element, VNode.Element> {
                                 });
                             }
 
-                            if (eventCallBack) {
-                                (<Function>eventCallBack).call(this.ext.ob, e, ...eventParams);
-                            }
+                            (<Function>eventCallBack).call(this.ext.ob, e, ...eventParams);
                         }
                     }
                 ]);
