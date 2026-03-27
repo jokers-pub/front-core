@@ -82,14 +82,21 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
 
                     //可能存在before等钩子中触发了当前的移出
                     if (this.node) {
+                        let needKeepalive =
+                            keepalive === true &&
+                            this.node instanceof VNode.Component &&
+                            this.node?.component?.isKeepAlive;
+
                         //remove 应该按照append倒序执行
-                        this.ext.render?.removeNode(this.node);
+                        this.ext.render?.removeNode(this.node, needKeepalive);
 
                         this.parent.childrens && remove(this.parent.childrens, this.node);
 
-                        //通知放最后
-                        this.notifyNodeWatcher("remove");
-                        this.destroyOtherData();
+                        if (!needKeepalive) {
+                            //通知放最后
+                            this.notifyNodeWatcher("remove");
+                            this.destroyOtherData();
+                        }
                     }
                 }
             };
