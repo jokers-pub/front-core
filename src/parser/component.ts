@@ -323,11 +323,11 @@ export class ParserComponent extends IParser<
         }
 
         if (this.node?.component?.[IS_DESTROY]) return;
-        this.node && (this.node.events.length = 0);
 
         if (keepalive === true && this.node?.component?.isKeepAlive) {
             this.node?.component?.$destroy();
         } else {
+            this.node && (this.node.events.length = 0);
             this.node?.component?.$destroy(true);
             this.ast.node = undefined;
         }
