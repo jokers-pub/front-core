@@ -2,13 +2,16 @@ import { escape2Html, isEmptyStr, isObject, logger, remove, removeFilter } from 
 import { VNode } from "./vnode";
 const LOGTAG = "DOM Rendering";
 
-const TAG_PLAINTEXT_ELEMENT = ["script", "style", "textarea", "pre"];
+const TAG_PLAINTEXT_ELEMENT = new Set(["script", "style", "textarea", "pre"]);
+const KEYBOARD_EVENTS = new Set(["keydown", "keypress", "keyup"]);
+const MOUSE_EVENTS = new Set(["click", "dbclick", "mouseup", "mousedown"]);
 
 type TransitionType = "transition" | "animation";
 
 let eventSeed = 0;
 
-const svgElementTags = [
+// 用Set缓存SVG标签，O(1)查找
+const svgElementTags = new Set([
     "svg",
     "defs",
     "use",
@@ -21,7 +24,16 @@ const svgElementTags = [
     "path",
     "text",
     "g"
-];
+]);
+
+// 缓存命令组类型判断，避免每次多个instanceof
+const COMMAND_GROUP_TYPES = new Set([
+    VNode.Component,
+    VNode.Condition,
+    VNode.List,
+    VNode.ListItem,
+    VNode.RenderSection
+]);
 
 export namespace Render {
     /**
@@ -156,7 +168,7 @@ export namespace Render {
                 if (
                     node.parent &&
                     node.parent instanceof VNode.Element &&
-                    TAG_PLAINTEXT_ELEMENT.includes(node.parent.tagName)
+                    TAG_PLAINTEXT_ELEMENT.has(node.parent.tagName)
                 ) {
                     this.removeNode(node);
                     this.appendNode(node);
@@ -186,7 +198,22 @@ export namespace Render {
             domNodes?.forEach((item) => item?.remove());
 
             if (!reserveOutPut) {
-                node instanceof VNode.Element && removeAssistEvent(node);
+                if (node instanceof VNode.Element) {
+                    // 清理所有辅助事件
+                    removeAssistEvent(node);
+                    // 清理所有定时器
+                    if (node._timerIds?.length) {
+                        node._timerIds.forEach((id) => clearTimeout(id));
+                        node._timerIds = undefined;
+                    }
+                    // 清理所有事件监听器
+                    if (node._eventListeners?.length) {
+                        node._eventListeners.forEach(([target, event, handler]) => {
+                            target.removeEventListener(event, handler);
+                        });
+                        node._eventListeners = undefined;
+                    }
+                }
                 node.output = undefined;
             }
         }
@@ -222,8 +249,8 @@ export namespace Render {
                     const e = _e.event;
 
                     if (
-                        (e instanceof KeyboardEvent && ["keydown", "keypress", "keyup"].includes(eventName)) ||
-                        (e instanceof MouseEvent && ["click", "dbclick", "mouseup", "mousedown"].includes(eventName))
+                        (e instanceof KeyboardEvent && KEYBOARD_EVENTS.has(eventName)) ||
+                        (e instanceof MouseEvent && MOUSE_EVENTS.has(eventName))
                     ) {
                         if (checkEventModifier(e, event.modifiers) === false) continue;
                     }
@@ -295,13 +322,21 @@ export namespace Render {
                         }
                     };
 
-                    setTimeout(() => {
+                    const timerId = window.setTimeout(() => {
                         if (ended < transitionInfo.count) {
                             resolve();
                         }
                     }, transitionInfo.timeout + 1);
 
-                    node.output?.addEventListener(`${type}end`, onEnd);
+                    // 保存定时器ID，节点销毁时清理
+                    node._timerIds ??= [];
+                    node._timerIds.push(timerId);
+
+                    const eventName = `${type}end`;
+                    node.output?.addEventListener(eventName, onEnd);
+                    // 保存事件监听器引用，节点销毁时清理
+                    node._eventListeners ??= [];
+                    node._eventListeners.push([node.output, eventName, onEnd]);
                 });
             });
         }
@@ -313,7 +348,7 @@ export namespace Render {
                 if (
                     node.parent &&
                     node.parent instanceof VNode.Element &&
-                    TAG_PLAINTEXT_ELEMENT.includes(node.parent.tagName)
+                    TAG_PLAINTEXT_ELEMENT.has(node.parent.tagName)
                 ) {
                     node.output = this.parserHtml(node.text);
                 } else {
@@ -343,7 +378,7 @@ export namespace Render {
                 const tagName = node.tagName.toLowerCase();
 
                 //@ts-ignore
-                if (tagName === "svg" || svgElementTags.includes(tagName) || node.parent?.inSvg) {
+                if (tagName === "svg" || svgElementTags.has(tagName) || node.parent?.inSvg) {
                     //@ts-ignore
                     node.inSvg = true;
                     element = document.createElementNS("http://www.w3.org/2000/svg", node.tagName);
@@ -409,8 +444,8 @@ export namespace Render {
                     }
 
                     if (
-                        (e instanceof KeyboardEvent && ["keydown", "keypress", "keyup"].includes(eventName)) ||
-                        (e instanceof MouseEvent && ["click", "dbclick", "mouseup", "mousedown"].includes(eventName))
+                        (e instanceof KeyboardEvent && KEYBOARD_EVENTS.has(eventName)) ||
+                        (e instanceof MouseEvent && MOUSE_EVENTS.has(eventName))
                     ) {
                         if (checkEventModifier(e, event.modifiers) === false) return;
                     }
@@ -453,6 +488,9 @@ export namespace Render {
                     registoryAssistEvent(node, eventName, eventCallBack, eventOpt);
                 } else {
                     el.addEventListener(eventName, eventCallBack, eventOpt);
+                    // 保存事件监听器引用，节点销毁时统一清理
+                    node._eventListeners ??= [];
+                    node._eventListeners.push([el, eventName, eventCallBack]);
                 }
             }
         }
@@ -464,13 +502,7 @@ export namespace Render {
         }
 
         private isCommandGroup(node: VNode.Node) {
-            return (
-                node instanceof VNode.Component ||
-                node instanceof VNode.Condition ||
-                node instanceof VNode.List ||
-                node instanceof VNode.ListItem ||
-                node instanceof VNode.RenderSection
-            );
+            return COMMAND_GROUP_TYPES.has(node.constructor as any);
         }
 
         private appendNodeChildren(node: VNode.Node, element: Element, parent?: VNode.Node, index?: number) {
@@ -537,8 +569,10 @@ export namespace Render {
 
         private setAttribute(el: HTMLElement, attrName: string, attrVal: any) {
             if (!el) return;
-            if (typeof attrVal === "boolean") {
-                if (attrVal) {
+
+            // 布尔属性/undefined属性快速路径（scoped类属性值为undefined时需要设置）
+            if (typeof attrVal === "boolean" || attrVal === undefined) {
+                if (attrVal || attrName.startsWith("data-scoped-")) {
                     el.setAttribute(attrName, "");
                 } else {
                     el.removeAttribute(attrName);
@@ -546,28 +580,28 @@ export namespace Render {
                 return;
             }
 
+            // style对象快速路径
+            if (attrName === "style" && isObject(attrVal)) {
+                const style = el.style;
+                style.cssText = "";
+                for (const name in attrVal) {
+                    const val = attrVal[name];
+                    if (val === undefined || val === false || val === null) continue;
+                    const strVal = String(val);
+                    if (!isEmptyStr(strVal)) {
+                        //@ts-ignore
+                        style[name] = strVal;
+                    }
+                }
+                return;
+            }
+
+            // class处理
             if (attrName === "class") {
                 if (attrVal) {
                     let newClass = flatClassValues(attrVal);
                     attrVal = newClass.join(" ");
                 }
-            } else if (attrName === "style" && isObject(attrVal)) {
-                el.removeAttribute("style");
-                for (const name in attrVal) {
-                    let isEmptyValue = false;
-                    if (attrVal[name] === undefined || attrVal[name] === false) {
-                        isEmptyValue = true;
-                    }
-                    const val = String(attrVal[name]);
-                    if (isEmptyStr(val)) {
-                        isEmptyValue = true;
-                    }
-                    if (!isEmptyValue) {
-                        //@ts-ignore
-                        el.style[name] = val;
-                    }
-                }
-                return;
             }
 
             attrVal = (attrVal ?? "").toString().trim();
@@ -577,15 +611,25 @@ export namespace Render {
                     .filter((m) => m.trim())
                     .join(" ");
             }
+
+            if (isEmptyStr(attrVal) && !attrName.startsWith("data-scoped-")) {
+                el.removeAttribute(attrName);
+                return;
+            }
+
+            // value属性特殊处理
             if (attrName === "value" && "value" in el) {
                 el.value = attrVal;
-            } else {
-                if (attrName === "xlink:href") {
-                    el.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", attrVal);
-                } else {
-                    el.setAttribute(attrName, attrVal);
-                }
+                return;
             }
+
+            // xlink特殊处理
+            if (attrName === "xlink:href") {
+                el.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", attrVal);
+                return;
+            }
+
+            el.setAttribute(attrName, attrVal);
         }
         //#endregion
     }
@@ -723,10 +767,16 @@ function getTransitionInfo(el: Element, type: TransitionType) {
 }
 
 function getTimeout(delays: string[], durations: string[]): number {
+    // 修复bug：concat不修改原数组，直接补全delays
     while (delays.length < durations.length) {
-        delays.concat(delays);
+        delays = delays.concat(durations[delays.length]);
     }
-    return Math.max(...durations.map((d, i) => toMs(d) + toMs(delays[i])));
+    let max = 0;
+    for (let i = 0; i < durations.length; i++) {
+        const total = toMs(durations[i]) + toMs(delays[i]);
+        if (total > max) max = total;
+    }
+    return max;
 }
 
 function toMs(s: string): number {
@@ -770,13 +820,13 @@ class HtmlContainerWebComponent extends HTMLElement {
  * Recursively add data-scoped attributes to all elements
  */
 function addDataScopedAttribute(element: HTMLElement, scoped: string) {
+    const attrName = "data-scoped-" + scoped;
     const childNodes = element.childNodes;
-    for (let i = 0; i < childNodes.length; i++) {
-        const node = childNodes[i];
+    for (let i = 0, len = childNodes.length; i < len; i++) {
+        const node = childNodes[i] as HTMLElement;
         if (node.nodeType === 1) {
-            const childElement = node as HTMLElement;
-            childElement.setAttribute("data-scoped-" + scoped, "");
-            addDataScopedAttribute(childElement, scoped);
+            node.setAttribute(attrName, "");
+            addDataScopedAttribute(node, scoped);
         }
     }
 }
@@ -791,16 +841,18 @@ function flatClassValues(value: any, _result?: string[]): string[] {
             result.push(trimmedClass);
         }
     } else if (Array.isArray(value)) {
-        value.forEach((item) => flatClassValues(item, result));
+        for (let i = 0, len = value.length; i < len; i++) {
+            flatClassValues(value[i], result);
+        }
     } else if (value !== null && typeof value === "object") {
-        Object.entries(value).forEach(([key, val]) => {
-            if (val) {
+        for (const key in value) {
+            if (value[key]) {
                 const trimmedKey = key.trim();
                 if (trimmedKey && !result.includes(trimmedKey)) {
                     result.push(trimmedKey);
                 }
             }
-        });
+        }
     }
     return result;
 }

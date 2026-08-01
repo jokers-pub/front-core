@@ -224,12 +224,19 @@ export class ParserComponent extends IParser<
                 }
             };
 
-            this.node.component!.$on("mounted", () => {
+            const mountedHandler = () => {
                 this.node?.component.$off("beforeDestroy", destoryReject);
+                this.node?.component.$off("mounted", mountedHandler);
                 resolve(undefined);
-            });
+            };
 
-            this.node.component!.$on("beforeDestroy", destoryReject);
+            const destroyHandler = () => {
+                this.node?.component.$off("mounted", mountedHandler);
+                destoryReject();
+            };
+
+            this.node.component!.$on("mounted", mountedHandler);
+            this.node.component!.$on("beforeDestroy", destroyHandler);
 
             this.node.component!.$mount(this.node);
 

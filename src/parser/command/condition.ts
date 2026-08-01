@@ -4,62 +4,86 @@ import { VNode } from "../vnode";
 import { isEmptyStr, logger } from "@joker.front/shared";
 
 export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
-    public parser() {
-        this.node = new VNode.Condition(this.ast.kind, this.parent);
+    /** 缓存当前条件链的下一个条件节点，避免每次遍历next */
+    private nextCondition?: VNode.Condition;
+    /** 标记是否是else节点 */
+    private isElse = false;
 
-        if (this.ast.kind !== "else") {
+    public parser() {
+        const node = new VNode.Condition(this.ast.kind, this.parent);
+        this.node = node;
+        const kind = this.ast.kind;
+        this.isElse = kind === "else";
+
+        // 提前缓存下一个条件节点，后续不需要每次遍历
+        let next: VNode.Node | undefined = node.next;
+        while (next) {
+            const curr = next;
+            if (!(curr instanceof VNode.Condition) || curr.cmdName === "if") break;
+            if (curr.cmdName === "elseif" || curr.cmdName === "else") {
+                this.nextCondition = curr;
+                break;
+            }
+            next = curr.next;
+        }
+
+        if (!this.isElse) {
             if (isEmptyStr(this.ast.condition)) {
                 logger.error(
                     "Conditional Command",
-                    `The current conditional command ${this.ast.kind} has no judgment condition, please check`
+                    `The current conditional command ${kind} has no judgment condition, please check`
                 );
             }
 
-            let conditionResult = this.runExpressWithWatcher(
-                this.ast.condition,
-                this.ob,
-                (newVal) => {
-                    let value = !!newVal;
+            const astCode = this.ast._code;
+            const condition = this.ast.condition;
+            const ob = this.ob;
 
-                    if (this.node?.result !== value) {
-                        this.node!.result = value;
-                        if (value === false && this.node?.isShow) {
-                            //第一时间销毁子集 销毁子集 避免子集做无效的值响应更新，if切换时，使用keepalive
+            let conditionResult = this.runExpressWithWatcher(
+                condition,
+                ob,
+                (newVal) => {
+                    const value = !!newVal;
+                    if (node.result === value) return;
+
+                    node.result = value;
+
+                    // 提前销毁不需要的节点，避免无效更新
+                    if (value === false) {
+                        if (node.isShow) {
                             this.destroyChildrens(true);
-                        } else if (value && !this.node?.isShow) {
-                            //第一时间销毁else
-                            let elseNode = this.getElseNode();
-                            if (elseNode && elseNode.isShow && elseNode.childrens?.length) {
-                                let parserTarget = elseNode[VNode.PARSERKEY];
-                                if (parserTarget && parserTarget instanceof ParserCondition) {
-                                    parserTarget.renderConditionChildren();
-                                }
+                        }
+                    } else {
+                        // 当前条件为true时，第一时间销毁else节点
+                        const elseNode = this.getElseNode();
+                        if (elseNode?.isShow && elseNode.childrens?.length) {
+                            const parserTarget = elseNode[VNode.PARSERKEY];
+                            if (parserTarget instanceof ParserCondition) {
+                                parserTarget.renderConditionChildren();
                             }
                         }
-
-                        this.reloadAllCondition();
                     }
+
+                    this.reloadAllCondition();
                 },
                 false,
-                () => {
-                    return this.ast._code;
-                }
+                () => astCode
             );
 
             //第一次运行完表达式，进行留值存储
-            this.node.result = !!conditionResult;
+            node.result = !!conditionResult;
         }
 
         this.appendNode();
-
         this.renderConditionChildren();
     }
 
-    renderId?: string;
     private getElseNode() {
-        let nextNode = this.node?.next;
+        // 优先用缓存的nextCondition查找
+        let nextNode = this.nextCondition || this.node?.next;
         //向上查询，获取级联条件结果
-        while (nextNode && nextNode instanceof VNode.Condition) {
+        while (nextNode) {
+            if (!(nextNode instanceof VNode.Condition)) break;
             if (nextNode.cmdName === "if") break;
 
             if (nextNode.cmdName === "else") {
@@ -67,47 +91,35 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
             }
             nextNode = nextNode.next;
         }
+        return undefined;
     }
+
     /**
      * 渲染子集
      *
      * @return 返回当前渲染是否有显示变更
      */
     private renderConditionChildren() {
-        let newShowState = false;
-        let prevResult = this.getPrevIfResult();
+        const node = this.node!;
 
-        if (prevResult) {
-            newShowState = false;
-        } else if (this.ast.kind === "else") {
-            newShowState = true;
-        } else {
-            //刷新一次result
-            this.node!.result = !!this.runExpress(this.ast.condition, this.ob, () => {
-                this.ast._code;
-            });
-            if (this.node!.result) {
-                newShowState = true;
-            }
-        }
+        // 计算新的显示状态：前面有条件为true则隐藏，else默认显示，非else用已经计算好的result
+        const newShowState = this.getPrevIfResult() ? false : this.isElse ? true : node.result;
 
         //展示状态发生改变才去触发子节点的创建或销毁
-        if (newShowState !== this.node!.isShow) {
-            this.node!.isShow = newShowState;
-
-            //先去触发一次销毁，避免同一个条件 被多次渲染 同为true 时，可能会被多次渲染
-            this.destroyChildrens(true);
-
-            if (newShowState) {
-                if (this.ast.childrens) {
-                    this.ext.parserNodes(this.ast.childrens, this.node!, this.ob);
-                }
-            }
-
-            return true;
+        if (newShowState === node.isShow) {
+            return false;
         }
 
-        return false;
+        node.isShow = newShowState;
+
+        //先销毁旧节点，避免重复渲染
+        this.destroyChildrens(true);
+
+        if (newShowState && this.ast.childrens) {
+            this.ext.parserNodes(this.ast.childrens, node, this.ob);
+        }
+
+        return true;
     }
 
     /**
@@ -122,18 +134,21 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
          */
 
         //如果当前节点就是if则算上面（虚拟条件为false）
-        if (this.ast.kind === "if") {
+        if (!this.isElse && this.ast.kind === "if") {
             return false;
         }
 
         let prevNode = this.node?.prev;
         //向上查询，获取级联条件结果
-        while (prevNode && prevNode instanceof VNode.Condition) {
+        while (prevNode) {
+            if (!(prevNode instanceof VNode.Condition)) break;
+
+            // 找到第一个为true的条件直接返回
             if (prevNode.result) {
                 return true;
             }
 
-            //避免相邻之间互相影响
+            //遇到if起始节点终止遍历
             if (prevNode.cmdName === "if") {
                 break;
             }
@@ -157,55 +172,32 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
          */
 
         //执行自己的子集渲染
-        let isChange = this.renderConditionChildren();
+        const isChange = this.renderConditionChildren();
 
         /**
          * 如果自己发生变更，则向下传递影响性
          * 若自身无变更，则不向下传递，交由下面的观察者触发
          *
          * 这样可以过滤掉多条件相同观察对象的场景的无效响应
-         *
-         * 例如：
-         * @if(a ===1){
-         * }
-         * else if(a===2){
-         * }
-         * else if(true){
-         * }
-         *
-         * 若a从3变更到1时
-         * 第一个if发生变更向下传递所有变更影响
-         * 这时else if(a===2) 也收到变更通知， 这时发现自身展示状态无变更，则不向下传递影响
          */
         if (isChange) {
-            let next = this.node?.next;
+            // 优先用缓存的nextCondition，减少遍历
+            let next = this.nextCondition || this.node?.next;
 
             //有下一级 && 下一级是条件节点 && 下一级不是if起始
-            while (next && next instanceof VNode.Condition && next.cmdName !== "if") {
-                let parserTarget = next[VNode.PARSERKEY];
+            while (next) {
+                if (!(next instanceof VNode.Condition) || next.cmdName === "if") break;
 
-                if (parserTarget && parserTarget instanceof ParserCondition) {
-                    parserTarget.renderConditionChildren();
+                const parserTarget = next[VNode.PARSERKEY];
+                if (parserTarget instanceof ParserCondition) {
+                    // 子节点如果没有变更，终止传递
+                    if (!parserTarget.renderConditionChildren()) {
+                        break;
+                    }
                 }
 
                 next = next.next;
             }
-        }
-
-        let next = this.node?.next;
-        if (!this.node?.result) {
-            this.destroyChildrens(true);
-        }
-
-        //有下一级 && 下一级是条件节点 && 下一级不是if起始
-        while (next && next instanceof VNode.Condition && next.cmdName !== "if") {
-            let parserTarget = next[VNode.PARSERKEY];
-
-            if (parserTarget && parserTarget instanceof ParserCondition) {
-                parserTarget.renderConditionChildren();
-            }
-
-            next = next.next;
         }
     }
 }

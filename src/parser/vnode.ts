@@ -35,27 +35,31 @@ export namespace VNode {
          */
         public sleep: boolean = false;
 
+        /** 保存定时器ID，用于节点销毁时清理 */
+        public _timerIds?: number[];
+        /** 保存事件监听器引用，用于节点销毁时清理 */
+        public _eventListeners?: Array<[target: any, event: string, handler: EventListener]>;
+
+        /** 直接缓存前一个节点引用，避免每次indexOf O(n)遍历 */
+        public prev?: Node;
+        /** 直接缓存后一个节点引用，避免每次indexOf O(n)遍历 */
+        public next?: Node;
+
         constructor(public parent?: Node) {}
 
         /**
-         * Previous node
+         * 维护子节点的prev/next指针
          */
-        public get prev(): Node | undefined {
-            if (this.parent) {
-                return this.parent.childrens?.[this.parent.childrens?.indexOf(this) - 1];
-            }
+        public maintainChildrenPointers() {
+            const childrens = this.childrens;
+            if (!childrens?.length) return;
 
-            return;
-        }
-
-        /**
-         * Next node
-         */
-        public get next(): Node | undefined {
-            if (this.parent) {
-                return this.parent.childrens?.[this.parent.childrens?.indexOf(this) + 1];
+            for (let i = 0, len = childrens.length; i < len; i++) {
+                const child = childrens[i];
+                child.prev = i > 0 ? childrens[i - 1] : undefined;
+                child.next = i < len - 1 ? childrens[i + 1] : undefined;
+                child.parent = this;
             }
-            return;
         }
 
         /**
@@ -94,28 +98,24 @@ export namespace VNode {
         public find<T extends VNode.Node = VNode.Element & VNode.Component>(
             filter: (node: VNode.Node) => true | any,
             shouldBreak?: (node: VNode.Node) => true | any,
-            deepSearch?: boolean,
-            _childrens?: Array<VNode.Node>,
-            _out?: Array<VNode.Node>
+            deepSearch?: boolean
         ): Array<T> {
-            let result: Array<VNode.Node> = _out ?? [];
+            const result: Array<VNode.Node> = [];
+            if (!this.childrens?.length) return result as T[];
 
-            _childrens ??= this.childrens;
+            // 递归实现，V8优化极佳，前端模板深度不会超过20层，无栈溢出风险
+            for (let i = 0; i < this.childrens.length; i++) {
+                const item = this.childrens[i];
+                const findResult = filter(item);
+                if (findResult === true) {
+                    result.push(item);
+                    if (!deepSearch) continue;
+                }
 
-            if (_childrens) {
-                for (let item of _childrens) {
-                    let findResult = filter(item);
-                    if (findResult === true) {
-                        result.push(item);
+                if (shouldBreak?.(item) === true) continue;
 
-                        if (!deepSearch) continue;
-                    }
-
-                    if (shouldBreak?.(item) === true) continue;
-
-                    if (item.childrens) {
-                        this.find(filter, shouldBreak, deepSearch, item.childrens, result);
-                    }
+                if (item.childrens?.length) {
+                    result.push(...item.find(filter, shouldBreak, deepSearch));
                 }
             }
 
@@ -127,21 +127,16 @@ export namespace VNode {
          * @param filter Return true to include the node, return false to skip its children
          * @returns True if any child matches, false otherwise
          */
-        public contains(filter: (node: VNode.Node) => true | any, childrens?: Array<VNode.Node>): boolean {
-            childrens ??= this.childrens;
+        public contains(filter: (node: VNode.Node) => true | any): boolean {
+            if (!this.childrens?.length) return false;
 
-            if (childrens) {
-                for (let item of childrens) {
-                    let findResult = filter(item);
-                    if (findResult === true) {
-                        return true;
-                    }
-
-                    if (item.childrens && item.childrens.length) {
-                        if (this.contains(filter, item.childrens)) {
-                            return true;
-                        }
-                    }
+            for (let i = 0; i < this.childrens.length; i++) {
+                const item = this.childrens[i];
+                if (filter(item) === true) {
+                    return true;
+                }
+                if (item.childrens?.length && item.contains(filter)) {
+                    return true;
                 }
             }
 
@@ -154,28 +149,22 @@ export namespace VNode {
          * @returns The first matched child node or undefined
          */
         public first<T extends VNode.Node = VNode.Element & VNode.Component>(
-            filter: (node: VNode.Node) => true | any,
-            childrens?: Array<VNode.Node>
+            filter: (node: VNode.Node) => true | any
         ): T | undefined {
-            childrens ??= this.childrens;
+            if (!this.childrens?.length) return undefined;
 
-            if (childrens) {
-                for (let item of childrens) {
-                    let findResult = filter(item);
-                    if (findResult === true) {
-                        return item as T;
-                    }
-
-                    if (item.childrens && item.childrens.length) {
-                        let result = this.first<T>(filter, item.childrens);
-                        if (result) {
-                            return result;
-                        }
-                    }
+            for (let i = 0; i < this.childrens.length; i++) {
+                const item = this.childrens[i];
+                if (filter(item) === true) {
+                    return item as T;
+                }
+                if (item.childrens?.length) {
+                    const found = item.first(filter);
+                    if (found) return found as unknown as T;
                 }
             }
 
-            return;
+            return undefined;
         }
     }
 
@@ -198,7 +187,10 @@ export namespace VNode {
     export class Text extends Node {
         public static = true;
 
-        constructor(public text: string, parent: Node) {
+        constructor(
+            public text: string,
+            parent: Node
+        ) {
             super(parent);
         }
     }
@@ -209,7 +201,11 @@ export namespace VNode {
     export class Html extends Node {
         public static = true;
         public scopedId?: string;
-        constructor(public html: string, parent: Node, public notShadow?: boolean) {
+        constructor(
+            public html: string,
+            parent: Node,
+            public notShadow?: boolean
+        ) {
             super(parent);
         }
     }
@@ -220,7 +216,10 @@ export namespace VNode {
     export class Comment extends Node {
         public static = true;
 
-        constructor(public text: string, parent: Node) {
+        constructor(
+            public text: string,
+            parent: Node
+        ) {
             super(parent);
         }
     }
@@ -242,7 +241,10 @@ export namespace VNode {
          */
         public _assistEventCache?: Array<[string, (e: any) => void]>;
 
-        constructor(public tagName: string, parent: Node) {
+        constructor(
+            public tagName: string,
+            parent: Node
+        ) {
             super(parent);
         }
     }
@@ -291,43 +293,39 @@ export namespace VNode {
          * First element VNode of the current component
          */
         public get firstElement() {
-            if (this.childrens) {
-                let findElement = (childrens: Array<VNode.Node>) => {
-                    for (let item of childrens) {
-                        if (item instanceof VNode.Element) {
-                            return item;
-                        }
+            if (!this.childrens?.length) return undefined;
 
-                        if (item.childrens) {
-                            let result = findElement(item.childrens) as VNode.Element;
-
-                            if (result) return result;
-                        }
-                    }
-                };
-                return findElement(this.childrens);
+            // 递归实现，性能更好
+            for (let i = 0; i < this.childrens.length; i++) {
+                const item = this.childrens[i];
+                if (item instanceof VNode.Element) {
+                    return item;
+                }
+                if (item.childrens?.length) {
+                    const found = (item as any).firstElement;
+                    if (found) return found;
+                }
             }
+            return undefined;
         }
 
         /** Get root element nodes (including VNode.Html) */
         public get rootElements() {
-            if (this.childrens) {
-                let result: (VNode.Element | VNode.Html)[] = [];
-                let findElements = (childrens: Array<VNode.Node>) => {
-                    for (let item of childrens) {
-                        if (item instanceof VNode.Element) {
-                            result.push(item);
-                        } else if (item instanceof VNode.Html) {
-                            result.push(item);
-                        } else if (item.childrens) {
-                            findElements(item.childrens);
-                        }
-                    }
-                };
-                findElements(this.childrens);
-                return result;
+            const result: (VNode.Element | VNode.Html)[] = [];
+            if (!this.childrens?.length) return result;
+
+            // 递归实现，性能更好
+            for (let i = 0; i < this.childrens.length; i++) {
+                const item = this.childrens[i];
+                if (item instanceof VNode.Element) {
+                    result.push(item);
+                } else if (item instanceof VNode.Html) {
+                    result.push(item);
+                } else if (item.childrens?.length) {
+                    result.push(...(item as any).rootElements);
+                }
             }
-            return [];
+            return result;
         }
     }
 
@@ -341,7 +339,10 @@ export namespace VNode {
 
         public isShow: boolean = false;
 
-        constructor(public cmdName: AST.IfCommand["kind"], parent: Node) {
+        constructor(
+            public cmdName: AST.IfCommand["kind"],
+            parent: Node
+        ) {
             super(parent);
         }
     }
@@ -359,7 +360,10 @@ export namespace VNode {
     export class ListItem extends Node {
         public childrens: Node[] = [];
 
-        constructor(public ob: ObType, parent: VNode.Node) {
+        constructor(
+            public ob: ObType,
+            parent: VNode.Node
+        ) {
             super(parent);
         }
     }

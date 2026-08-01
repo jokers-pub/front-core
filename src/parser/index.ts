@@ -39,7 +39,11 @@ export class ParserTemplate {
     /** VNode rendering handler (dependency injection) */
     public render: Render.IRender;
 
-    constructor(public asts: AST.Node[], public ob: ObType, parent?: VNode.Node) {
+    constructor(
+        public asts: AST.Node[],
+        public ob: ObType,
+        parent?: VNode.Node
+    ) {
         this.root.component = ob;
         this.render = IContainer.get(Render.IRENDERIOCTAGID) ?? new Render.DomRender();
         if (parent && parent instanceof VNode.Node) {
@@ -139,10 +143,10 @@ export class ParserTemplate {
      * @param node VNode node
      */
     public removeRef(node: VNode.Node) {
-        for (let refKey in this.refs) {
-            if (this.refs[refKey].includes(node)) {
-                remove(this.refs[refKey], node);
-            }
+        // 直接通过node上保存的refKey定位，O(1)时间复杂度，不需要遍历所有ref
+        if (node.ref) {
+            remove(this.refs[node.ref], node);
+            node.ref = undefined;
         }
     }
 

@@ -28,27 +28,20 @@ const OBJECTPROXY_DEPLEVE_ID = Symbol.for("__JOKER_OBJECTPROXY_DEPLEVE_ID__");
  * @returns True if the object can be proxied
  */
 function checkEnableProxy(data: any): boolean {
-    try {
-        return (
-            data !== undefined &&
-            data !== null &&
-            isObject(data) &&
-            data !== window.parent &&
-            data instanceof Window === false &&
-            data instanceof Watcher === false &&
-            data instanceof Component === false &&
-            data instanceof ParserTemplate === false &&
-            (Array.isArray(data) || isPlainObject(data) || data instanceof Set || data instanceof Map) &&
-            // Not frozen
-            !Object.isFrozen(data) &&
-            !(data instanceof Element) &&
-            !(JOKER_VNODE_TAG in data) &&
-            !(JOKER_SHALLOW_OBSERVER_TAG in data) &&
-            !(JOKER_COMPONENT_TAG in data)
-        );
-    } catch {
-        return false;
-    }
+    if (data == null || typeof data !== "object") return false;
+    if (Object.isFrozen(data)) return false;
+
+    // 只代理数组、普通对象、Set、Map
+    const isObservableType = Array.isArray(data) || isPlainObject(data) || data instanceof Set || data instanceof Map;
+    if (!isObservableType) return false;
+
+    // 内部标记判断，避免代理框架内部对象
+    return !(
+        JOKER_VNODE_TAG in data ||
+        JOKER_SHALLOW_OBSERVER_TAG in data ||
+        JOKER_COMPONENT_TAG in data ||
+        OBJECTPROXY_DEPID in data
+    );
 }
 
 /**
@@ -57,108 +50,76 @@ function checkEnableProxy(data: any): boolean {
  * @returns Proxied object
  */
 function proxyData<T extends object | Set<any>>(data: T): T {
-    let proxyDepTarget = getProxyDep(data);
+    // 极端边界场景防御：data为空或非对象直接返回，避免报错
+    if (data == null || typeof data !== "object") {
+        return data;
+    }
 
     // Return existing proxy if already observed
-    if (proxyDepTarget) {
+    if (getProxyDep(data)) {
         return data;
     }
 
     // Check for existing proxy data key
-    if (data && data.hasOwnProperty(OBJECTPROXY_DATA_KEY)) {
-        let readiedData = Reflect.get(data, OBJECTPROXY_DATA_KEY);
+    if (hasOwnProperty(data, OBJECTPROXY_DATA_KEY)) {
+        const readiedData = Reflect.get(data, OBJECTPROXY_DATA_KEY);
         if (readiedData) {
             return readiedData as T;
         }
     }
 
-    let dep = new Dep();
+    const dep = new Dep();
+    const isSetOrMap = data instanceof Set || data instanceof Map;
+    const mutableMethods = new Set(["add", "set", "delete", "clear"]);
 
     // Flag to skip notifications during initial setup
     let resetData = true;
 
-    let result = new Proxy(data, {
+    const result = new Proxy(data, {
         get(target: any, key: string | symbol, receiver: any) {
-            if (target instanceof Set || target instanceof Map) {
-                if (key === "add") {
-                    let result = Reflect.get(target, key) as Function;
-                    return (value: any) => {
-                        if (checkEnableProxy(value)) {
-                            // Observe objects before adding
-                            value = observer(value);
+            // 内部Key处理
+            if (key === OBJECTPROXY_DEPID) return dep;
+            if (key === OBJECTPROXY_DATA_KEY || key === OBJECTPROXY_DEPLEVE_ID) return undefined;
+            if (key === Symbol.toStringTag) return Reflect.get(target, key);
+
+            const value = Reflect.get(target, key, receiver);
+
+            // Set/Map可变方法代理
+            if (isSetOrMap && typeof value === "function") {
+                if (mutableMethods.has(key as string)) {
+                    return (...args: any[]) => {
+                        // 自动代理新值
+                        if (key === "add" || key === "set") {
+                            const valIdx = key === "add" ? 0 : 1;
+                            if (checkEnableProxy(args[valIdx])) {
+                                args[valIdx] = observer(args[valIdx]);
+                            }
                         }
-
-                        let callResult = result.call(target, value);
-                        notifyDep(dep, "size");
-                        notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
-                        return callResult;
-                    };
-                } else if (key === "set") {
-                    let result = Reflect.get(target, key) as Function;
-                    return (key: any, value: any) => {
-                        if (checkEnableProxy(value)) {
-                            // Observe objects before setting
-                            value = observer(value);
-                        }
-
-                        let callResult = result.call(target, key, value);
-                        notifyDep(dep, "size");
-                        notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
-                        return callResult;
-                    };
-                } else if (key === "delete" || key === "clear") {
-                    let result = Reflect.get(target, key) as Function;
-                    return (value: any) => {
-                        let callResult = result.call(target, value);
-
-                        if (key === "clear" || callResult) {
+                        const callResult = value.apply(target, args);
+                        // 触发更新
+                        const hasChange = key !== "delete" || callResult === true;
+                        if (hasChange) {
                             notifyDep(dep, "size");
                             notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
                         }
                         return callResult;
                     };
                 }
-                let result = Reflect.get(target, key);
-                if (typeof result === "function") {
-                    return result.bind(target);
+                return value.bind(target);
+            }
+
+            // 仅在依赖收集阶段执行追踪
+            if (Dep.target) {
+                const hasKey = key === "length" || key === "size" || hasOwnProperty(target, key);
+                if (hasKey) {
+                    dep.depend(key);
+                    if (checkEnableProxy(value)) {
+                        getProxyDep(value)?.depend(OBJECTPROXY_DEPLEVE_ID);
+                    }
                 }
             }
 
-            // Skip internal data key
-            if (key === OBJECTPROXY_DATA_KEY) {
-                return undefined;
-            }
-
-            // Return the Dep instance for this proxy
-            if (key === OBJECTPROXY_DEPID) {
-                return dep;
-            }
-
-            // Skip virtual dependency key
-            if (key === OBJECTPROXY_DEPLEVE_ID) {
-                return undefined;
-            }
-
-            let result = Reflect.get(target, key);
-
-            if (key === Symbol.toStringTag) {
-                return result;
-            }
-
-            // Skip non-existent properties (except length/size)
-            if (hasProperty(target, key) === false && key !== "length" && key !== "size") {
-                return result;
-            }
-
-            // Collect dependency for this property
-            dep.depend(key);
-
-            // Track nested object dependencies
-            if (checkEnableProxy(result)) {
-                getProxyDep(result)?.depend(OBJECTPROXY_DEPLEVE_ID);
-            }
-
-            return result;
+            return value;
         },
         set(target: object, key: string | symbol, value: any): boolean {
             if (resetData) {
@@ -188,10 +149,12 @@ function proxyData<T extends object | Set<any>>(data: T): T {
             return true;
         },
         deleteProperty(target: object, key: string | symbol): boolean {
+            const hasKey = hasOwnProperty(target, key);
             Reflect.deleteProperty(target, key);
 
-            // Notify on property deletion for non-arrays
-            if (Array.isArray(target) === false) {
+            // 数组删除元素或对象删除属性都需要通知深度更新
+            if (hasKey) {
+                notifyDep(dep, key);
                 notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
             }
 
@@ -223,9 +186,8 @@ function proxyData<T extends object | Set<any>>(data: T): T {
  * @returns Dep instance or undefined
  */
 function getProxyDep(data: any): Dep | undefined {
-    if (isObject(data)) {
-        return Reflect.get(data, OBJECTPROXY_DEPID);
-    }
+    // 高频调用，仅判断非空和对象类型，避免原始值调用Reflect.get报错
+    return data != null && typeof data === "object" ? Reflect.get(data, OBJECTPROXY_DEPID) : undefined;
 }
 
 /**
@@ -253,39 +215,27 @@ export function observer<T extends Object>(data: T, clone: boolean = false): T {
  * @param value Property value
  */
 export function defineObserverProperty(target: any, key: string | symbol | number, value: any) {
-    let propertyVal: any = value;
-
-    if (checkEnableProxy(value)) {
-        // Observe object values
-        propertyVal = observer(value);
-    }
-
-    let dep = new Dep();
+    let propertyVal: any = checkEnableProxy(value) ? observer(value) : value;
+    const dep = new Dep();
 
     Object.defineProperty(target, key, {
-        // Enumerable and configurable
         enumerable: true,
         configurable: true,
         get: () => {
-            dep.depend(key);
+            // 核心性能优化：非依赖收集阶段直接返回值，无额外函数调用开销
+            if (Dep.target === undefined) return propertyVal;
 
+            dep.depend(key);
             // Track nested dependencies
-            getProxyDep(propertyVal)?.depend(OBJECTPROXY_DEPLEVE_ID);
+            const nestedDep = getProxyDep(propertyVal);
+            if (nestedDep) nestedDep.depend(OBJECTPROXY_DEPLEVE_ID);
 
             return propertyVal;
         },
-        set: (value) => {
-            if (value === propertyVal) {
-                return;
-            }
+        set: (newVal) => {
+            if (Object.is(newVal, propertyVal)) return;
 
-            if (checkEnableProxy(value)) {
-                // Observe new object values
-                value = observer(value);
-            }
-
-            propertyVal = value;
-
+            propertyVal = checkEnableProxy(newVal) ? observer(newVal) : newVal;
             // Notify dependents
             notifyDep(dep, key);
         }
@@ -335,19 +285,19 @@ let combinedReplyQueue: Map<Dep, Array<string | symbol | number>> = new Map();
  * Notify a dependency, either immediately or queue for combined reply
  */
 function notifyDep(dep: Dep, key: string | symbol | number) {
-    // Direct notification when not combining
-    if (isCombined === false) dep.notify(key);
+    // Direct notification when not combining (99%场景，优先判断)
+    if (isCombined === false) {
+        dep.notify(key);
+        return;
+    }
     // Queue for combined notification
-    else {
-        let depQueue = combinedReplyQueue.get(dep);
-        if (depQueue === undefined) {
-            depQueue = [];
-            combinedReplyQueue.set(dep, depQueue);
-        }
-
-        if (!depQueue.includes(key)) {
-            depQueue.push(key);
-        }
+    let depQueue = combinedReplyQueue.get(dep);
+    if (depQueue === undefined) {
+        depQueue = [];
+        combinedReplyQueue.set(dep, depQueue);
+        depQueue.push(key);
+    } else if (!depQueue.includes(key)) {
+        depQueue.push(key);
     }
 }
 
@@ -360,22 +310,24 @@ export function combinedReply(func: Function) {
 
     try {
         func();
+
+        // 循环处理所有队列中的更新，包括更新过程中新增的变更，直到队列清空
+        while (combinedReplyQueue.size > 0) {
+            const currentQueue = new Map(combinedReplyQueue);
+            combinedReplyQueue.clear();
+            notifyGroupDeps(currentQueue);
+        }
     } catch (e: any) {
-        isCombined = false;
-        combinedReplyQueue.clear();
         logger.error(
             "Data Hijacking",
             "Encountered a blocking error while collecting changes for data hijacking composite responses. No action will be taken. Please investigate.",
             e
         );
-        return;
+        throw e;
+    } finally {
+        isCombined = false;
+        combinedReplyQueue.clear();
     }
-
-    isCombined = false;
-
-    // Notify all queued dependencies
-    notifyGroupDeps(combinedReplyQueue);
-    combinedReplyQueue.clear();
 }
 
 /**

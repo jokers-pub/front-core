@@ -9,13 +9,23 @@ import { VNode } from "./vnode";
 export const GLOBAL_TAG = "Global";
 const LOGTAG = "Render Core";
 /**
+ * 表达式缓存，避免重复创建Function（new Function开销极大）
+ */
+const expressCache = new Map<string, Function>();
+
+/**
  * 创建表达式运行方法
  * @param express 表达式字符串（依赖AST转换，自带参数文根）
  * @returns
  */
 function createExpress(express: string, customLog?: () => string | void): Function {
+    let fn = expressCache.get(express);
+    if (fn) return fn;
+
     try {
-        return new Function(EXPRESSHANDLERTAG, GLOBAL_TAG, `return ${express};`);
+        fn = new Function(EXPRESSHANDLERTAG, GLOBAL_TAG, `return ${express};`);
+        expressCache.set(express, fn);
+        return fn;
     } catch (e: any) {
         throw new Error(
             `An unknown error occurred while creating the expression execution method. \nmessage: ${e.message} \n${
@@ -28,8 +38,8 @@ function createExpress(express: string, customLog?: () => string | void): Functi
 export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
     /** 当前转换节点ref标记 */
     public ref: string = "";
-    /** 当前AST解析 所产生的观察者 */
-    private watchers: Watcher<any>[] = [];
+    /** 当前AST解析 所产生的观察者（用Set自动去重，避免includes O(n)判断） */
+    private watchers = new Set<Watcher<any>>();
 
     public node?: N;
 
@@ -90,7 +100,12 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
                         //remove 应该按照append倒序执行
                         this.ext.render?.removeNode(this.node, needKeepalive);
 
-                        this.parent.childrens && remove(this.parent.childrens, this.node);
+                        if (this.parent.childrens) {
+                            const { prev, next } = this.node;
+                            if (prev) prev.next = next;
+                            if (next) next.prev = prev;
+                            remove(this.parent.childrens, this.node);
+                        }
 
                         if (!needKeepalive) {
                             //通知放最后
@@ -108,7 +123,12 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
                 })
             ) {
                 //先解除层级关系，不阻塞其余节点正常卸载
-                remove(this.parent.childrens, this.node);
+                if (this.parent.childrens) {
+                    const { prev, next } = this.node;
+                    if (prev) prev.next = next;
+                    if (next) next.prev = prev;
+                    remove(this.parent.childrens, this.node);
+                }
 
                 //消除所有子集的watcher监听
                 this.destroyChildrensWatcher(this.node);
@@ -147,13 +167,21 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      * 销毁所有子集VNode
      */
     public destroyChildrens(keepalive?: boolean) {
-        while (this.node?.childrens?.length) {
-            let item = this.node.childrens[0];
+        const childrens = this.node?.childrens;
+        if (!childrens?.length) return;
+
+        // 倒序销毁，避免从头部删除导致的数组shift O(n)开销
+        for (let i = childrens.length - 1; i >= 0; i--) {
+            const item = childrens[i];
             if (item[VNode.PARSERKEY]) {
                 item[VNode.PARSERKEY].destroy(keepalive);
             } else {
                 //root 类型 ，不做销毁，只是做数组移除，销毁已处理
-                remove(this.node.childrens, item);
+                childrens.splice(i, 1);
+                // 维护指针
+                if (i > 0) {
+                    childrens[i - 1].next = undefined;
+                }
             }
         }
     }
@@ -162,15 +190,10 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      * 销毁所有子集VNode的watcher，为了防止延迟卸载时，无效通知广播
      */
     protected destroyChildrensWatcher(nodeItem?: VNode.Node) {
-        if (nodeItem?.childrens?.length) {
-            for (let node of nodeItem?.childrens) {
-                if (node[VNode.PARSERKEY]) {
-                    node[VNode.PARSERKEY].clearWatchers();
-
-                    this.destroyChildrensWatcher(node);
-                }
-            }
-        }
+        nodeItem?.childrens?.forEach((node) => {
+            node[VNode.PARSERKEY]?.clearWatchers();
+            this.destroyChildrensWatcher(node);
+        });
     }
 
     /**
@@ -188,11 +211,30 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
 
             this.ext.render?.appendNode(this.node, index);
 
+            const childrens = this.parent.childrens;
             if (index === undefined) {
-                this.parent.childrens.push(this.node);
+                const len = childrens.length;
+                if (len > 0) {
+                    const prev = childrens[len - 1];
+                    this.node.prev = prev;
+                    prev.next = this.node;
+                }
+                childrens.push(this.node);
             } else {
-                this.parent.childrens.splice(index, 0, this.node);
+                const len = childrens.length;
+                if (index > 0) {
+                    const prev = childrens[index - 1];
+                    this.node.prev = prev;
+                    prev.next = this.node;
+                }
+                if (index < len) {
+                    const next = childrens[index];
+                    this.node.next = next;
+                    next.prev = this.node;
+                }
+                childrens.splice(index, 0, this.node);
             }
+            this.node.parent = this.parent;
             this.notifyNodeWatcher("append");
         }
     }
@@ -220,9 +262,8 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
         try {
             return createExpress(express, customLog).call(ob, ob, __GLONAL_FUNTIONS__);
         } catch (e: any) {
-            logger.error(LOGTAG, `Expression error:${e.message}\n` + (customLog?.() || express), {
-                ob
-            });
+            const logInfo = customLog?.() || express;
+            logger.error(LOGTAG, `Expression error:${e.message}\n${logInfo}`, { ob });
             console.error(e);
         }
     }
@@ -279,9 +320,7 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
      * @param watcher
      */
     protected addWatch(watcher: Watcher<any>) {
-        if (this.watchers.includes(watcher) === false) {
-            this.watchers.push(watcher);
-        }
+        this.watchers.add(watcher);
     }
 
     /**
@@ -291,7 +330,6 @@ export abstract class IParser<T extends AST.Node, N extends VNode.Node> {
         this.watchers.forEach((w) => {
             w.destroy();
         });
-
-        this.watchers.length = 0;
+        this.watchers.clear();
     }
 }

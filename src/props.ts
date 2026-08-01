@@ -137,8 +137,10 @@ export function getPropValue(
  * @param propOption Value to check
  * @returns True if valid prop type, false otherwise
  */
+const PROP_TYPES = new Set([String, Array, Number, Object, Function, Boolean]);
+
 function isPropsType(propOption: any): boolean {
-    if ([String, Array, Number, Object, Function, Boolean].includes(propOption)) {
+    if (PROP_TYPES.has(propOption)) {
         return true;
     }
 

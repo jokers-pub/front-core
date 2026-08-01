@@ -94,9 +94,7 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
                     }
                 },
                 true,
-                () => {
-                    return this.ast._code;
-                }
+                () => this.ast._code
             );
 
             //执行下一次循环设值
@@ -129,61 +127,88 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
 
         let index = 0;
 
-        if (listOb && (Array.isArray(listOb) || isPlainObject(listOb))) {
-            for (let key in listOb) {
-                let stepOb = Object.create(this.ob);
-                let keyVal = Array.isArray(listOb) ? Number(key) : key;
-                //对于数组时，index为索引，对于对象index为key（统称索引Key）
-                if (param.indexKey) {
-                    defineObserverProperty(stepOb, param.indexKey, keyVal);
-                }
+        if (listOb) {
+            const isArray = Array.isArray(listOb);
+            // 提前判断是否是可遍历类型，避免循环内重复判断
+            if (isArray || isPlainObject(listOb)) {
+                const hasIndexKey = !!param.indexKey;
+                const hasItemKey = !!param.itemKey;
+                const itemKey = param.itemKey;
+                const indexKey = param.indexKey;
+                const astCode = this.ast._code;
 
-                if (param.itemKey) {
-                    defineObserverProperty(stepOb, param.itemKey, listOb[key]);
-                }
-                let currentIndex = index++;
+                for (let key in listOb) {
+                    let stepOb = Object.create(this.ob);
+                    let keyVal = isArray ? Number(key) : key;
+                    //对于数组时，index为索引，对于对象index为key（统称索引Key）
+                    if (hasIndexKey) {
+                        defineObserverProperty(stepOb, indexKey!, keyVal);
+                    }
 
-                this.renderItem(stepOb, currentIndex, param.indexKey);
+                    const itemVal = listOb[key];
+                    if (hasItemKey) {
+                        defineObserverProperty(stepOb, itemKey!, itemVal);
+                    }
+                    let currentIndex = index++;
 
-                if (param.itemKey) {
-                    this.runExpressWithWatcher(
-                        //@ts-ignore
-                        () => listOb[keyVal],
-                        listOb,
-                        async (newVal, _, isEqual, watcher) => {
-                            //做一次等待，防止后续长度变更带来的二次更新
-                            await Promise.resolve();
-                            if (watcher.isDestroy) return;
+                    this.renderItem(stepOb, currentIndex, indexKey, itemKey);
 
-                            if (keyVal in listOb) {
-                                stepOb[param.itemKey!] = newVal;
-                                if (!isEqual) {
-                                    this.updateListItemOb(stepOb, currentIndex);
+                    if (hasItemKey) {
+                        this.runExpressWithWatcher(
+                            //@ts-ignore
+                            () => listOb[keyVal],
+                            listOb,
+                            async (newVal, _, isEqual, watcher) => {
+                                //做一次等待，防止后续长度变更带来的二次更新
+                                await Promise.resolve();
+                                if (watcher.isDestroy) return;
+
+                                if (keyVal in listOb) {
+                                    stepOb[itemKey!] = newVal;
+                                    if (!isEqual) {
+                                        this.updateListItemOb(stepOb, currentIndex, itemKey);
+                                    }
                                 }
-                            }
-                        },
-                        true,
-                        () => {
-                            return this.ast._code;
-                        }
-                    );
+                            },
+                            true,
+                            () => astCode
+                        );
+                    }
                 }
             }
         }
         this.destroyOldChildrens(index);
     }
 
-    findIndexByIndex(ob: ObType, startIndex: number, indexKey?: string) {
-        let nextIndex = -1;
-        if (this.node) {
-            for (let i = startIndex; i < this.node.childrens.length; i++) {
-                if (this.checkObEqual(ob, this.node.childrens[i]?.ob, indexKey ? [indexKey] : undefined)) {
-                    nextIndex = i;
-                    break;
+    findIndexByIndex(ob: ObType, startIndex: number, indexKey?: string, itemKey?: string) {
+        if (!this.node) return -1;
+
+        const childrens = this.node.childrens;
+        // 优先比较item值（item才是内容标识，index只是位置）
+        if (itemKey) {
+            const targetItemVal = ob[itemKey];
+            for (let i = startIndex, len = childrens.length; i < len; i++) {
+                const child = childrens[i];
+                if (child && child.ob[itemKey] === targetItemVal) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        // 条件循环（for i from x to y）只有一个循环变量，直接比较
+        const letKey = (this.ast.param as AST.ConditionParam).letKey;
+        if (letKey) {
+            const targetVal = ob[letKey];
+            for (let i = startIndex, len = childrens.length; i < len; i++) {
+                const child = childrens[i];
+                if (child && child.ob[letKey] === targetVal) {
+                    return i;
                 }
             }
         }
-        return nextIndex;
+
+        return -1;
     }
 
     /**
@@ -191,37 +216,45 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
      * @param ob
      * @param index
      */
-    private renderItem(ob: ObType, index: number, indexKey?: string): any {
+    private renderItem(ob: ObType, index: number, indexKey?: string, itemKey?: string): any {
         if (!this.ast.childrens?.length || !this.node) {
             return;
         }
 
-        let stepList = this.node.childrens?.[index];
+        let stepList = this.node.childrens[index];
 
         //若已经存在，则响应变更
         if (stepList) {
-            if (this.checkObEqual(ob, stepList.ob, indexKey ? [indexKey] : undefined)) {
-                //做一次index 同步
-                if (indexKey && stepList.ob[indexKey] !== ob[indexKey]) {
-                    stepList.ob[indexKey] = ob[indexKey];
+            const stepOb = stepList.ob;
+            let isEqual = true;
+
+            // 直接比较固定属性，不需要通用遍历：item是内容标识，优先比较
+            if (itemKey) {
+                if (stepOb[itemKey] !== ob[itemKey]) isEqual = false;
+            } else {
+                // 条件循环场景
+                const letKey = (this.ast.param as AST.ConditionParam).letKey;
+                if (stepOb[letKey] !== ob[letKey]) isEqual = false;
+            }
+
+            if (isEqual) {
+                // 是同一个节点，同步index（如果有变化）
+                if (indexKey && stepOb[indexKey] !== ob[indexKey]) {
+                    stepOb[indexKey] = ob[indexKey];
                 }
                 return;
             }
 
-            let nextIndex = this.findIndexByIndex(ob, index + 1, indexKey);
+            let nextIndex = this.findIndexByIndex(ob, index + 1, indexKey, itemKey);
 
             if (nextIndex > -1) {
-                //删除
-                if (index + 1 === nextIndex) {
-                    this.node.childrens?.[index]?.[VNode.PARSERKEY]?.destroy();
-                } else {
-                    //删除同位索引项，相同位置删除几次
-                    for (let i = 0; i < nextIndex - index - 1; i++) {
-                        this.node.childrens?.[index]?.[VNode.PARSERKEY]?.destroy();
-                    }
+                //删除中间多余的节点
+                const deleteCount = nextIndex - index;
+                for (let i = 0; i < deleteCount; i++) {
+                    this.node.childrens[index]?.[VNode.PARSERKEY]?.destroy();
                 }
 
-                return this.renderItem(ob, index, indexKey);
+                return this.renderItem(ob, index, indexKey, itemKey);
             } else {
                 //新增
                 return new ParserListeItem(this.ast, ob, this.node!, this.ext).init(index);
@@ -231,22 +264,29 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
         }
     }
 
-    private updateListItemOb(ob: any, index: number) {
-        if (!this.ast.childrens?.length || !this.node) {
+    private updateListItemOb(ob: any, index: number, itemKey?: string) {
+        const childrens = this.node?.childrens;
+        if (!this.ast.childrens?.length || !childrens || index >= childrens.length) {
             return;
         }
 
-        let stepList = this.node.childrens?.[index];
-        foEachProperties(ob, (key: PropertyKey, val: any) => {
-            //@ts-ignore
-            if (stepList!.ob[key] !== val) {
-                //新老值不一致时
+        const stepOb = childrens[index]?.ob;
+        if (!stepOb) return;
 
-                //设置值，做值变更通知
-                //@ts-ignore
-                stepList!.ob[key] = val;
+        // 直接更新固定属性，不需要遍历
+        if (itemKey) {
+            const newVal = ob[itemKey];
+            if (stepOb[itemKey] !== newVal) {
+                stepOb[itemKey] = newVal;
             }
-        });
+        } else {
+            // 条件循环场景
+            const letKey = (this.ast.param as AST.ConditionParam).letKey;
+            const newVal = ob[letKey];
+            if (stepOb[letKey] !== newVal) {
+                stepOb[letKey] = newVal;
+            }
+        }
     }
     /**
      * 销毁历史遗留多余的节点
@@ -254,27 +294,20 @@ export class ParserList extends IParser<AST.ForCommand, VNode.List> {
      */
     private destroyOldChildrens(index: number) {
         if (!this.node) return;
-        while (this.node.childrens.length > index) {
-            let item = this.node!.childrens.pop();
+        const childrens = this.node.childrens;
+        while (childrens.length > index) {
+            let item = childrens.pop();
 
             if (item) {
+                // 维护prev/next指针
+                if (childrens.length > 0) {
+                    childrens[childrens.length - 1].next = undefined;
+                }
                 item[VNode.PARSERKEY]?.destroy(false);
             } else {
                 break;
             }
         }
-    }
-
-    private checkObEqual(newOb: ObType, oldOb?: any, excludeKey?: PropertyKey[]) {
-        let equal = true;
-        if (oldOb === undefined) return false;
-
-        foEachProperties(newOb, (key: PropertyKey, val: any) => {
-            if (!excludeKey?.includes(key) && oldOb?.[key] !== val) {
-                equal = false;
-            }
-        });
-        return equal;
     }
 }
 

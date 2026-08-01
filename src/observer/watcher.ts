@@ -4,6 +4,11 @@ const LOGTAG = "Data Observation";
 
 export const BREAK_WATCH_UPDATE = Symbol.for("JOKER_BREAK_WATCH_UPDATE");
 /**
+ * 点表达式缓存，避免重复分割和创建getter
+ */
+const getterCache = new Map<string, Function>();
+
+/**
  * Convert value expression to get method
  * @param exp Expression string
  * @returns Getter function or undefined on error
@@ -14,20 +19,23 @@ function transformGetter(exp: string): Function | undefined {
         return;
     }
 
+    let getter = getterCache.get(exp);
+    if (getter) return getter;
+
     const exps = exp.split(".");
+    const len = exps.length;
 
-    return function (data: object) {
+    getter = function (data: object) {
         let result: any = data;
-        exps.forEach((key) => {
-            if (!result) {
-                return;
-            }
-
-            result = result[key];
-        });
-
+        for (let i = 0; i < len; i++) {
+            if (!result) return result;
+            result = result[exps[i]];
+        }
         return result;
     };
+
+    getterCache.set(exp, getter);
+    return getter;
 }
 
 /**
@@ -49,13 +57,15 @@ export class Watcher<T extends object = any> {
      *
      * Main purpose: filter duplicates at runtime and collect "valid" Dep relationships
      * Each Dep corresponds to an object, and object keys do not repeat
+     * 用Set存储key，O(1)判断代替O(n) includes
      */
-    private runRelations: Map<Dep, Array<string | symbol | number>> = new Map();
+    private runRelations: Map<Dep, Set<string | symbol | number>> = new Map();
 
     /**
      * Actual dependency relations
+     * 用Set存储key，O(1)判断代替O(n) includes
      */
-    public relations: Map<Dep, Array<string | symbol | number>> = new Map();
+    public relations: Map<Dep, Set<string | symbol | number>> = new Map();
 
     /**
      * @param ob Data source to observe (object or getter function)
@@ -98,7 +108,7 @@ export class Watcher<T extends object = any> {
 
     public getValue() {
         // Skip if watcher is destroyed (avoids upward listening broadcasts)
-        if (this.getter === undefined) {
+        if (this.isDestroy || this.getter === undefined) {
             return;
         }
 
@@ -111,8 +121,9 @@ export class Watcher<T extends object = any> {
         } catch (e) {
             logger.error(LOGTAG, "Failed to retrieve value. Executed method: " + this.getter.toString());
             throw e;
+        } finally {
+            Dep.target = undefined;
         }
-        Dep.target = undefined;
 
         this.clearnDeps();
         return value;
@@ -124,20 +135,20 @@ export class Watcher<T extends object = any> {
      * @param key Observed property key
      */
     public addDep(dep: Dep, key: string | symbol | number) {
+        if (this.isDestroy) return;
+
         let runItem = this.runRelations.get(dep);
-
-        if (runItem === undefined || !runItem.includes(key)) {
-            runItem = runItem || [];
-            runItem.push(key);
-
+        if (!runItem) {
+            runItem = new Set();
             this.runRelations.set(dep, runItem);
+        }
+        if (runItem.has(key)) return;
 
-            const depItem = this.relations.get(dep);
-            // Add if relationship not previously stored
-            // Cleanup will handle relation conversion later
-            if (depItem === undefined || !depItem.includes(key)) {
-                dep.addWatcher(key, this);
-            }
+        runItem.add(key);
+
+        const depItem = this.relations.get(dep);
+        if (!depItem?.has(key)) {
+            dep.addWatcher(key, this);
         }
     }
 
@@ -145,17 +156,22 @@ export class Watcher<T extends object = any> {
      * Update observed value and trigger response
      */
     public update() {
-        // Prevent circular calls during notification
-        if (this.updating) return;
+        // 快速路径：已销毁/更新中直接返回
+        if (this.isDestroy || this.updating) return;
 
-        const newVal = this.getValue();
+        this.updating = true;
+        try {
+            const newVal = this.getValue();
 
-        if (newVal === BREAK_WATCH_UPDATE) return;
+            if (newVal === BREAK_WATCH_UPDATE) return;
 
-        const oldVal = this.value;
+            const oldVal = this.value;
 
-        // Force callback | value changed | value is object (reference type)
-        if (this.forceCallBack || newVal !== oldVal || isObject(newVal)) {
+            // 快速路径：值完全相同且不需要强制回调，直接返回
+            if (newVal === oldVal && !this.forceCallBack && !isObject(newVal)) {
+                return;
+            }
+
             this.value = newVal;
 
             // Skip response for reference-unequal but value-equal objects
@@ -164,25 +180,21 @@ export class Watcher<T extends object = any> {
             if (isEqualValue && !this.forceCallBack) {
                 return;
             }
-            this.updating = true;
-            try {
-                this.updateCallBack(newVal, oldVal, isEqualValue, this);
-            } catch (e) {
-                throw e;
-            } finally {
-                this.updating = false;
-            }
+
+            this.updateCallBack(newVal, oldVal, isEqualValue, this);
+        } finally {
+            this.updating = false;
         }
     }
 
     public destroy() {
-        this.relations.forEach((keys, dep) => {
-            for (const key of keys) {
-                dep.removeWatcher(key, this);
-            }
-        });
+        if (this.isDestroy) return;
 
         this.isDestroy = true;
+
+        this.relations.forEach((keys, dep) => {
+            keys.forEach((key) => dep.removeWatcher(key, this));
+        });
 
         this.relations.clear();
         this.runRelations.clear();
@@ -194,23 +206,26 @@ export class Watcher<T extends object = any> {
     }
 
     private clearnDeps() {
+        // 清理旧的不再使用的依赖
         this.relations.forEach((keys, dep) => {
             const runItem = this.runRelations.get(dep);
-            for (const key of keys) {
-                if (runItem) {
-                    if (!runItem.includes(key)) {
+            if (runItem) {
+                // 移除本次运行没有访问到的key
+                keys.forEach((key) => {
+                    if (!runItem.has(key)) {
                         dep.removeWatcher(key, this);
                     }
-                } else {
-                    // Remove all dependencies for this key
-                    dep.removeWatcher(key, this);
-                }
+                });
+            } else {
+                // 整个dep都没访问到，移除所有key
+                keys.forEach((key) => dep.removeWatcher(key, this));
             }
         });
 
-        this.relations.clear();
+        // 交换relations和runRelations，避免创建新Map
+        const temp = this.relations;
         this.relations = this.runRelations;
-
-        this.runRelations = new Map();
+        this.runRelations = temp;
+        this.runRelations.clear();
     }
 }

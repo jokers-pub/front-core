@@ -87,14 +87,15 @@ export class EventBus<T extends Record<string, any>> {
      * @returns Whether the event was stopped (`false` if stopped)
      */
     public async trigger<K extends keyof T>(eventName: K, param?: T[K]) {
-        let callbacks = [...(this.eventDatas.get(eventName) || [])];
-        callbacks.push(...(this.eventDatas.get("*") || []));
+        const originalCallbacks = this.eventDatas.get(eventName) || [];
+        const originalGlobalCallbacks = this.eventDatas.get("*") || [];
+        // 复制数组遍历，避免遍历过程中修改原数组影响
+        const callbacks = [...originalCallbacks, ...originalGlobalCallbacks];
 
-        if (callbacks && callbacks.length) {
-            let i = 0,
-                callTimes = 0,
+        if (callbacks.length) {
+            let callTimes = 0,
                 isBreak = false;
-            while (callbacks[i]) {
+            for (let i = 0; i < callbacks.length; i++) {
                 const item = callbacks[i];
                 const result = await item.callBack(
                     {
@@ -105,12 +106,16 @@ export class EventBus<T extends Record<string, any>> {
                     param
                 );
 
+                // 一次性事件从原始数组中移除
                 if (item.once) {
-                    remove(callbacks, item);
-                } else {
-                    i++;
+                    if (originalCallbacks.includes(item)) {
+                        remove(originalCallbacks, item);
+                    } else {
+                        remove(originalGlobalCallbacks, item);
+                    }
                 }
 
+                callTimes++;
                 if (result === false || isBreak) {
                     return false;
                 }

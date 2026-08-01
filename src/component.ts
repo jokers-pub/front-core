@@ -10,6 +10,7 @@ import { isGetterProperty } from "./utils";
 const LOGTAG = "Component";
 const PROPS_DATA_KEY = Symbol.for("JOKER_PROPS_DATA_KEY");
 const PROPS_DATA_PROXY = Symbol.for("JOKER_PROPS_DATA_PROXY");
+const PROPS_CACHE_KEY = Symbol.for("JOKER_PROPS_CACHE_KEY");
 const PRIVATE_WATCHERS = Symbol.for("JOKER_PRIVATE_WATCHERS");
 const EVENT_DATA_KEY = Symbol.for("JOKER_EVENT_DATA_KEY");
 export const IS_DESTROY = Symbol.for("JOKER_IS_DESTROY");
@@ -37,7 +38,7 @@ export type SectionType = {
 
 type DefaultKeyVal = Record<string | symbol, any>;
 
-let componentFunctionPropertyNames = [
+const componentFunctionPropertyNames = new Set([
     "constructor",
     "$mount",
     "$nodeTransition",
@@ -57,7 +58,7 @@ let componentFunctionPropertyNames = [
     "sleeped",
     "wakeup",
     "destroyed"
-];
+]);
 
 /**
  * Joker component
@@ -107,7 +108,9 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
 
     private [PROPS_DATA_PROXY]?: Record<string, any>;
 
-    private [PRIVATE_WATCHERS]: Watcher<any>[] = [];
+    private [PROPS_CACHE_KEY]?: Map<string | symbol, { raw: any; value: any }>;
+
+    private [PRIVATE_WATCHERS] = new Set<Watcher<any>>();
 
     private [EVENT_DATA_KEY]: Map<string, Set<VNode.EventCallBack>> = new Map();
 
@@ -134,11 +137,52 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
      */
     public get props(): Readonly<T> {
         if (this[PROPS_DATA_PROXY] === undefined) {
-            let self = this;
+            const self = this;
+            // 缓存存储在组件实例上，便于销毁时显式清理，避免内存泄漏
+            this[PROPS_CACHE_KEY] = new Map<string | symbol, { raw: any; value: any }>();
 
             this[PROPS_DATA_PROXY] = new Proxy(self[PROPS_DATA_KEY], {
-                get(target, p: string) {
-                    return getPropValue(self[PROPS_DATA_KEY], p, self.propsOption);
+                get(target, p: string | symbol) {
+                    // Symbol属性直接返回，不做props处理（内置Symbol等）
+                    if (typeof p === "symbol") {
+                        //@ts-ignore
+                        return self[PROPS_DATA_KEY][p];
+                    }
+
+                    // 始终使用最新的PROPS_DATA_KEY，避免propsData被替换后访问旧值
+                    const currentPropsData = self[PROPS_DATA_KEY];
+                    const propsOption = self.propsOption;
+
+                    // 快速路径：无props配置（80%+业务场景），直接返回原始值，跳过所有缓存和转换逻辑
+                    if (propsOption === undefined) {
+                        //@ts-ignore
+                        if (p in currentPropsData) return currentPropsData[p];
+                        // 自动转换kebab-case到camelCase
+                        return currentPropsData[toLowerCase(p)];
+                    }
+
+                    const propsCache = self[PROPS_CACHE_KEY]!;
+
+                    // 统一获取原始值（这一步会触发响应式依赖收集）
+                    let rawVal: any;
+                    //@ts-ignore
+                    if (p in currentPropsData) {
+                        //@ts-ignore
+                        rawVal = currentPropsData[p];
+                    } else {
+                        rawVal = currentPropsData[toLowerCase(p)];
+                    }
+
+                    // 缓存命中且原始值未变化，直接返回缓存结果
+                    const cached = propsCache.get(p);
+                    if (cached && cached.raw === rawVal) {
+                        return cached.value;
+                    }
+
+                    // 首次访问/值变化时才调用getPropValue计算
+                    const value = getPropValue(currentPropsData, p, propsOption);
+                    propsCache.set(p, { raw: rawVal, value });
+                    return value;
                 },
                 set() {
                     throw new Error(
@@ -157,30 +201,30 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
      */
     public $mount(root: any | VNode.Component): this {
         if (this[TRANSFORM_FUNCTION_FLAG] === false) {
-            let getAllChildFuncProperties = () => {
-                let childMethods: string[] = [];
-                let currentObj = Object.getPrototypeOf(this);
-                while (currentObj !== null && currentObj !== Object.prototype) {
-                    Object.getOwnPropertyNames(currentObj).forEach((property) => {
-                        if (
-                            // Exclude constructor and internal functions
-                            componentFunctionPropertyNames.includes(property) === false &&
-                            // Exclude get properties
-                            !isGetterProperty(currentObj, property) &&
-                            typeof currentObj[property] === "function" &&
-                            // Exclude class
-                            !currentObj[property].prototype?.hasOwnProperty("constructor")
-                        ) {
-                            childMethods.push(property);
-                        }
-                    });
-                    currentObj = Object.getPrototypeOf(currentObj);
+            const childMethods: string[] = [];
+            let currentObj = Object.getPrototypeOf(this);
+            while (currentObj !== null && currentObj !== Object.prototype) {
+                const props = Object.getOwnPropertyNames(currentObj);
+                for (let i = 0, len = props.length; i < len; i++) {
+                    const property = props[i];
+                    if (
+                        // Exclude constructor and internal functions
+                        !componentFunctionPropertyNames.has(property) &&
+                        // Exclude get properties
+                        !isGetterProperty(currentObj, property) &&
+                        typeof currentObj[property] === "function" &&
+                        // Exclude class
+                        !currentObj[property].prototype?.hasOwnProperty("constructor")
+                    ) {
+                        childMethods.push(property);
+                    }
                 }
-                return childMethods;
-            };
+                currentObj = Object.getPrototypeOf(currentObj);
+            }
 
             // Change function this pointer
-            for (let name of getAllChildFuncProperties()) {
+            for (let i = 0, len = childMethods.length; i < len; i++) {
+                const name = childMethods[i];
                 this[name as keyof this] = (this[name as keyof this] as Function).bind(this);
             }
             this[TRANSFORM_FUNCTION_FLAG] = true;
@@ -309,11 +353,8 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         this[IS_DESTROY] = true;
 
         //#region Clear listeners within the component and listeners within template compilation
-        for (let watcher of this[PRIVATE_WATCHERS]) {
-            watcher.destroy();
-        }
-
-        this[PRIVATE_WATCHERS].length = 0;
+        this[PRIVATE_WATCHERS].forEach((watcher) => watcher.destroy());
+        this[PRIVATE_WATCHERS].clear();
 
         //先清除响应式，再执行销毁前的周期
         this[PARSER_TEMPLATE_TARGET]?.destroyWathcers();
@@ -341,6 +382,9 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         this.$sections = {};
 
         this[PROPS_DATA_PROXY] = undefined;
+        // 显式清空props缓存，彻底释放内存，避免内存泄漏
+        this[PROPS_CACHE_KEY]?.clear();
+        this[PROPS_CACHE_KEY] = undefined;
 
         this[PROPS_DATA_KEY] = {};
 
@@ -439,32 +483,29 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         callBack: (nv?: any, ov?: any) => void,
         forceCallBack?: boolean
     ): [any, () => void] {
+        const self = this;
         let watcher = new Watcher(
             () => {
-                if (this[IS_DESTROY]) {
-                    // Centralized cleaning
-                    for (let watcher of this[PRIVATE_WATCHERS]) {
-                        watcher.destroy();
-                    }
+                if (self[IS_DESTROY]) {
                     return BREAK_WATCH_UPDATE;
                 }
                 return express();
             },
             (newVal: any, oldVal: any) => {
-                if (this[IS_DESTROY]) return;
+                if (self[IS_DESTROY]) return;
                 callBack(newVal, oldVal);
             },
             undefined,
             forceCallBack
         );
 
-        this[PRIVATE_WATCHERS].push(watcher);
+        this[PRIVATE_WATCHERS].add(watcher);
 
         return [
             watcher.value,
             () => {
                 watcher.destroy();
-                remove(this[PRIVATE_WATCHERS], watcher);
+                self[PRIVATE_WATCHERS].delete(watcher);
             }
         ];
     }
@@ -476,15 +517,12 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
      */
     public $on(eventName: string, callBack: VNode.EventCallBack) {
         let callBacks = this[EVENT_DATA_KEY].get(eventName);
-
         if (callBacks === undefined) {
             callBacks = new Set();
             this[EVENT_DATA_KEY].set(eventName, callBacks);
         }
-
-        if (callBacks?.has(callBack) === false) {
-            callBacks.add(callBack);
-        }
+        // Set.add本身会自动去重，不需要额外判断
+        callBacks.add(callBack);
     }
 
     /**
@@ -507,19 +545,20 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
      * Event Listeners
      */
     public get $listeners() {
-        let result: Record<string, VNode.EventCallBack<any>[]> = {};
+        const result: Record<string, VNode.EventCallBack<any>[]> = {};
+        const eventMap = this[EVENT_DATA_KEY];
 
-        for (let eventName in this[EVENT_DATA_KEY]) {
-            result[eventName] ||= [];
+        eventMap.forEach((callBacks, eventName) => {
+            result[eventName] = Array.from(callBacks);
+        });
 
-            result[eventName].push(...Array.from(this[EVENT_DATA_KEY].get(eventName) || []));
-        }
-
-        if (this.$root && this.$root instanceof VNode.Component) {
-            for (let event of this.$root.events) {
-                let eventName = event[0];
-                result[eventName] ||= [];
-                result[eventName].push(event[1].callBack);
+        const root = this.$root;
+        if (root && root instanceof VNode.Component) {
+            const events = root.events;
+            for (let i = 0, len = events.length; i < len; i++) {
+                const [eventName, handler] = events[i];
+                const list = result[eventName] || (result[eventName] = []);
+                list.push(handler.callBack);
             }
         }
 
@@ -555,17 +594,20 @@ export class Component<T extends DefaultKeyVal = {}> implements IComponent {
         // Instance event response
         let callBacks = this[EVENT_DATA_KEY].get(eventName);
         if (callBacks?.size) {
-            [...callBacks].forEach((m) => {
-                m(e);
-            });
+            // 复制数组避免遍历过程中回调修改集合
+            const copy = Array.from(callBacks);
+            for (let i = 0, len = copy.length; i < len; i++) {
+                copy[i](e);
+            }
         }
 
         // Global supplement
         let globalCallBacks = this[EVENT_DATA_KEY].get("*");
         if (globalCallBacks?.size) {
-            [...globalCallBacks].forEach((m) => {
-                m(e);
-            });
+            const copy = Array.from(globalCallBacks);
+            for (let i = 0, len = copy.length; i < len; i++) {
+                copy[i](e);
+            }
         }
     }
 

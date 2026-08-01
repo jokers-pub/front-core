@@ -34,11 +34,14 @@ export class Dep {
      * @param watcher Watcher instance to add
      */
     public addWatcher(key: string | symbol | number, watcher: Watcher<any>) {
-        let watchers = this.watchers.get(key) || [];
-
-        watchers.push(watcher);
-
-        this.watchers.set(key, watchers);
+        let watchers = this.watchers.get(key);
+        if (!watchers) {
+            watchers = [];
+            this.watchers.set(key, watchers);
+        }
+        if (!watchers.includes(watcher)) {
+            watchers.push(watcher);
+        }
     }
 
     /**
@@ -60,22 +63,16 @@ export class Dep {
      */
     public notify(key: string | symbol | number) {
         const watchers = this.watchers.get(key);
+        if (!watchers?.length) return;
 
-        if (watchers) {
-            // Remove destroyed watchers
-            removeFilter(watchers, (w) => w.isDestroy);
+        // Remove destroyed watchers
+        removeFilter(watchers, (w) => w.isDestroy);
+        if (!watchers.length) return;
 
-            /**
-             * Use a copy of watchers to avoid issues with
-             * dynamic additions/removals during notification
-             */
-            const _watchers = [...watchers];
-
-            _watchers.forEach((w) => {
-                if (!w.isDestroy) {
-                    w.update();
-                }
-            });
+        // Copy array to avoid issues with dynamic additions/removals during notification
+        const copy = watchers.slice();
+        for (let i = 0, len = copy.length; i < len; i++) {
+            copy[i].update();
         }
     }
 }
@@ -84,22 +81,25 @@ export class Dep {
  * Notify groups of dependencies in a batch
  * @param list Map of Dep instances to their respective keys
  */
-export function notifyGroupDeps(list: Map<Dep, Array<string | symbol | number>>) {
-    const watchers: Watcher[] = [];
-    const hasNotifyWatchers: Watcher[] = [];
+export function notifyGroupDeps(list: Map<Dep, Set<string | symbol | number> | Array<string | symbol | number>>) {
+    // 用Set去重，O(1)判断代替O(n) includes
+    const notifiedWatchers = new Set<Watcher>();
 
     // Flatten watchers to avoid dynamic changes during notification
     list.forEach((keys, dep) => {
         keys.forEach((key) => {
-            watchers.push(...(dep.watchers.get(key) || []));
+            const watchers = dep.watchers.get(key);
+            if (!watchers?.length) return;
+
+            // 复制数组避免遍历过程中被修改
+            const copy = watchers.slice();
+            for (let i = 0, len = copy.length; i < len; i++) {
+                const watcher = copy[i];
+                if (!watcher.isDestroy && !notifiedWatchers.has(watcher)) {
+                    notifiedWatchers.add(watcher);
+                    watcher.update();
+                }
+            }
         });
-    });
-
-    watchers.forEach((watcher) => {
-        if (hasNotifyWatchers.includes(watcher)) return;
-
-        !watcher.isDestroy && watcher.update();
-
-        hasNotifyWatchers.push(watcher);
     });
 }
