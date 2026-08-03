@@ -143,7 +143,7 @@ export class ParserTemplate {
      * @param node VNode node
      */
     public removeRef(node: VNode.Node) {
-        if (node.ref && this.refs[node.ref].length) {
+        if (node.ref && this.refs[node.ref]?.length) {
             remove(this.refs[node.ref], node);
             node.ref = undefined;
         }
