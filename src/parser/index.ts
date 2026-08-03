@@ -143,8 +143,7 @@ export class ParserTemplate {
      * @param node VNode node
      */
     public removeRef(node: VNode.Node) {
-        // 直接通过node上保存的refKey定位，O(1)时间复杂度，不需要遍历所有ref
-        if (node.ref) {
+        if (node.ref && this.refs[node.ref].length) {
             remove(this.refs[node.ref], node);
             node.ref = undefined;
         }
