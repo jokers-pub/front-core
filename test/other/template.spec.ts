@@ -96,4 +96,51 @@ describe("template", () => {
         component.$destroy(true);
         expect(root.innerHTML.trim()).toEqual("");
     });
+
+    it("template ref firstElement should find element inside RenderSection", async () => {
+        class ParentView extends Component {
+            template = function () {
+                return getAst(`
+                    <template ref="content">
+                        <ChildComponent>
+                            <div class="slot-content">插槽内容</div>
+                        </ChildComponent>
+                    </template>
+                `);
+            };
+
+            components = {
+                ChildComponent
+            };
+        }
+
+        class ChildComponent extends Component {
+            template = function () {
+                return getAst(`
+                    <div class="child-wrapper">
+                        @RenderSection()
+                    </div>
+                `);
+            };
+        }
+
+        let root = document.createElement("div");
+        let component = new ParentView().$mount(root);
+
+        await component.$nextUpdatedRender();
+
+        // 验证渲染结果正确
+        expect(root.innerHTML).toEqual('<div class="child-wrapper"><div class="slot-content">插槽内容</div></div>');
+
+        // 直接获取ref并验证firstElement
+        const contentTpl = component.$getRef("content");
+        expect(contentTpl).not.toBeUndefined();
+        const firstElement = contentTpl?.firstElement;
+        expect(firstElement).not.toBeUndefined();
+        expect(firstElement?.attributes.class).toEqual("child-wrapper");
+        expect(firstElement?.output).not.toBeUndefined();
+        expect(firstElement?.output?.className).toEqual("child-wrapper");
+
+        component.$destroy();
+    });
 });

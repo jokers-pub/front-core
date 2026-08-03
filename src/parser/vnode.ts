@@ -166,6 +166,49 @@ export namespace VNode {
 
             return undefined;
         }
+
+        /**
+         * First element VNode of the current node
+         */
+        public get firstElement(): VNode.Element | undefined {
+            if (!this.childrens?.length) return undefined;
+
+            const findElement = (childrens: Array<VNode.Node>): VNode.Element | undefined => {
+                for (const item of childrens) {
+                    if (item instanceof VNode.Element) {
+                        return item;
+                    }
+                    if (item.childrens?.length) {
+                        const result = findElement(item.childrens);
+                        if (result) return result;
+                    }
+                }
+                return undefined;
+            };
+
+            return findElement(this.childrens);
+        }
+
+        /** Get root element nodes (including VNode.Html) */
+        public get rootElements(): Array<VNode.Element | VNode.Html> {
+            const result: (VNode.Element | VNode.Html)[] = [];
+            if (!this.childrens?.length) return result;
+
+            const findRootElements = (childrens: Array<VNode.Node>) => {
+                for (const item of childrens) {
+                    if (item instanceof VNode.Element) {
+                        result.push(item);
+                    } else if (item instanceof VNode.Html) {
+                        result.push(item);
+                    } else if (item.childrens?.length) {
+                        findRootElements(item.childrens);
+                    }
+                }
+            };
+
+            findRootElements(this.childrens);
+            return result;
+        }
     }
 
     /**
@@ -288,45 +331,6 @@ export namespace VNode {
 
         /** Whether to keep the component alive */
         public keepalive?: boolean;
-
-        /**
-         * First element VNode of the current component
-         */
-        public get firstElement() {
-            if (!this.childrens?.length) return undefined;
-
-            // 递归实现，性能更好
-            for (let i = 0; i < this.childrens.length; i++) {
-                const item = this.childrens[i];
-                if (item instanceof VNode.Element) {
-                    return item;
-                }
-                if (item.childrens?.length) {
-                    const found = (item as any).firstElement;
-                    if (found) return found;
-                }
-            }
-            return undefined;
-        }
-
-        /** Get root element nodes (including VNode.Html) */
-        public get rootElements() {
-            const result: (VNode.Element | VNode.Html)[] = [];
-            if (!this.childrens?.length) return result;
-
-            // 递归实现，性能更好
-            for (let i = 0; i < this.childrens.length; i++) {
-                const item = this.childrens[i];
-                if (item instanceof VNode.Element) {
-                    result.push(item);
-                } else if (item instanceof VNode.Html) {
-                    result.push(item);
-                } else if (item.childrens?.length) {
-                    result.push(...(item as any).rootElements);
-                }
-            }
-            return result;
-        }
     }
 
     /**
