@@ -22,6 +22,44 @@ const OBJECTPROXY_DATA_KEY = Symbol.for("__JOKER_OBJECT_PROXY_DATA_KEY__");
  */
 const OBJECTPROXY_DEPLEVE_ID = Symbol.for("__JOKER_OBJECTPROXY_DEPLEVE_ID__");
 
+// 预缓存Set/Map原型方法列表，避免每个实例创建时重复遍历原型（性能优化）
+const SET_PROTO_METHODS = new Set<string | symbol>();
+const MAP_PROTO_METHODS = new Set<string | symbol>();
+
+(function initProtoMethods() {
+    // 缓存Set原型方法
+    const setProto = Set.prototype;
+    Object.getOwnPropertyNames(setProto).forEach((name) => {
+        if (name === "constructor") return;
+        const desc = Object.getOwnPropertyDescriptor(setProto, name);
+        if (desc && typeof desc.value === "function") {
+            SET_PROTO_METHODS.add(name);
+        }
+    });
+    Object.getOwnPropertySymbols(setProto).forEach((sym) => {
+        const desc = Object.getOwnPropertyDescriptor(setProto, sym);
+        if (desc && typeof desc.value === "function") {
+            SET_PROTO_METHODS.add(sym);
+        }
+    });
+
+    // 缓存Map原型方法
+    const mapProto = Map.prototype;
+    Object.getOwnPropertyNames(mapProto).forEach((name) => {
+        if (name === "constructor") return;
+        const desc = Object.getOwnPropertyDescriptor(mapProto, name);
+        if (desc && typeof desc.value === "function") {
+            MAP_PROTO_METHODS.add(name);
+        }
+    });
+    Object.getOwnPropertySymbols(mapProto).forEach((sym) => {
+        const desc = Object.getOwnPropertyDescriptor(mapProto, sym);
+        if (desc && typeof desc.value === "function") {
+            MAP_PROTO_METHODS.add(sym);
+        }
+    });
+})();
+
 /**
  * Check if an object can be proxied for observation
  * @param data Object to check
@@ -72,6 +110,46 @@ function proxyData<T extends object | Set<any>>(data: T): T {
     const isSetOrMap = data instanceof Set || data instanceof Map;
     const mutableMethods = new Set(["add", "set", "delete", "clear"]);
 
+    // 预缓存Set/Map方法，避免每次访问都创建新函数（性能优化）
+    const methodCache = new Map<string | symbol, Function>();
+
+    if (isSetOrMap) {
+        const protoMethods = data instanceof Set ? SET_PROTO_METHODS : MAP_PROTO_METHODS;
+        const proto = Object.getPrototypeOf(data);
+
+        // 使用预缓存的方法列表，避免每个实例都遍历原型链
+        for (const name of protoMethods) {
+            const desc = Object.getOwnPropertyDescriptor(proto, name);
+            if (!desc || typeof desc.value !== "function") continue;
+
+            const originalMethod = desc.value;
+
+            if (mutableMethods.has(name as string)) {
+                // 可变方法包装响应式逻辑
+                methodCache.set(name, (...args: any[]) => {
+                    // 自动代理新添加的值
+                    if (name === "add" || name === "set") {
+                        const valIdx = name === "add" ? 0 : 1;
+                        if (checkEnableProxy(args[valIdx])) {
+                            args[valIdx] = observer(args[valIdx]);
+                        }
+                    }
+                    const callResult = originalMethod.apply(data, args);
+                    // 触发更新通知
+                    const hasChange = name !== "delete" || callResult === true;
+                    if (hasChange) {
+                        notifyDep(dep, "size");
+                        notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
+                    }
+                    return callResult;
+                });
+            } else {
+                // 非可变方法直接绑定原生target，只绑定一次
+                methodCache.set(name, originalMethod.bind(data));
+            }
+        }
+    }
+
     // Flag to skip notifications during initial setup
     let resetData = true;
 
@@ -82,30 +160,24 @@ function proxyData<T extends object | Set<any>>(data: T): T {
             if (key === OBJECTPROXY_DATA_KEY || key === OBJECTPROXY_DEPLEVE_ID) return undefined;
             if (key === Symbol.toStringTag) return Reflect.get(target, key);
 
-            const value = Reflect.get(target, key, receiver);
+            let value: any;
 
-            // Set/Map可变方法代理
-            if (isSetOrMap && typeof value === "function") {
-                if (mutableMethods.has(key as string)) {
-                    return (...args: any[]) => {
-                        // 自动代理新值
-                        if (key === "add" || key === "set") {
-                            const valIdx = key === "add" ? 0 : 1;
-                            if (checkEnableProxy(args[valIdx])) {
-                                args[valIdx] = observer(args[valIdx]);
-                            }
-                        }
-                        const callResult = value.apply(target, args);
-                        // 触发更新
-                        const hasChange = key !== "delete" || callResult === true;
-                        if (hasChange) {
-                            notifyDep(dep, "size");
-                            notifyDep(dep, OBJECTPROXY_DEPLEVE_ID);
-                        }
-                        return callResult;
-                    };
+            // Set/Map特殊处理：所有内置属性和方法必须直接在target上访问，不能传递receiver(Proxy)
+            // 因为Set/Map的内置访问器和方法会严格校验this必须是原生Set/Map实例，否则抛出TypeError
+            if (isSetOrMap) {
+                // 优先从缓存中获取方法，避免重复创建
+                if (methodCache.has(key)) {
+                    value = methodCache.get(key);
+                } else if (key === "size") {
+                    // size是访问器属性，直接在target上获取
+                    value = Reflect.get(target, key);
+                } else {
+                    // 其他属性正常获取
+                    value = Reflect.get(target, key);
                 }
-                return value.bind(target);
+            } else {
+                // 普通对象和数组正常使用receiver，支持原型链继承场景
+                value = Reflect.get(target, key, receiver);
             }
 
             // 仅在依赖收集阶段执行追踪
