@@ -71,6 +71,35 @@ describe("parser-cmd", () => {
         data.model.ifr = 2;
         expect(root.innerHTML).toEqual("<div>3</div>");
 
+        // 测试直接从if为true跳到所有条件不满足，else是否正常显示
+        data.model.ifr = 0;
+        expect(root.innerHTML).toEqual("<div>1</div>");
+        data.model.ifr = 2;
+        expect(root.innerHTML).toEqual("<div>3</div>");
+
+        // 测试多个elseif场景
+        let root2 = mountAst(
+            `
+                @if(model.ifr===0){
+                    <div>1</div>
+                }
+                else if(model.ifr===1){
+                    <div>2</div>
+                }
+                else if(model.ifr===2){
+                    <div>3</div>
+                }
+                else{
+                    <div>4</div>
+                }
+            `,
+            data
+        );
+        data.model.ifr = 0;
+        expect(root2.innerHTML).toEqual("<div>1</div>");
+        data.model.ifr = 3; // 直接跳到所有条件不满足
+        expect(root2.innerHTML).toEqual("<div>4</div>");
+
         root = mountAst(
             `
                 @if(!model.arr){

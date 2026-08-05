@@ -97,13 +97,15 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
     /**
      * 渲染子集
      *
+     * @param prevHasTrue 可选参数，标记前面是否已有条件为true，避免重复向上遍历
      * @return 返回当前渲染是否有显示变更
      */
-    private renderConditionChildren() {
+    private renderConditionChildren(prevHasTrue?: boolean) {
         const node = this.node!;
 
-        // 计算新的显示状态：前面有条件为true则隐藏，else默认显示，非else用已经计算好的result
-        const newShowState = this.getPrevIfResult() ? false : this.isElse ? true : node.result;
+        // 计算新的显示状态：如果传入了前面是否有true的标记就直接用，否则向上查询
+        const hasPrevTrue = prevHasTrue ?? this.getPrevIfResult();
+        const newShowState = hasPrevTrue ? false : this.isElse ? true : node.result;
 
         //展示状态发生改变才去触发子节点的创建或销毁
         if (newShowState === node.isShow) {
@@ -181,8 +183,10 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
          * 这样可以过滤掉多条件相同观察对象的场景的无效响应
          */
         if (isChange) {
-            // 优先用缓存的nextCondition，减少遍历
-            let next = this.nextCondition || this.node?.next;
+            // 从当前节点的下一个节点开始遍历，确保所有后续条件节点都被处理
+            let next = this.node?.next;
+            // 标记当前节点是否已经显示，如果当前节点显示，后面的节点都应该隐藏
+            let currentShowState = this.node!.isShow;
 
             //有下一级 && 下一级是条件节点 && 下一级不是if起始
             while (next) {
@@ -190,9 +194,11 @@ export class ParserCondition extends IParser<AST.IfCommand, VNode.Condition> {
 
                 const parserTarget = next[VNode.PARSERKEY];
                 if (parserTarget instanceof ParserCondition) {
-                    // 子节点如果没有变更，终止传递
-                    if (!parserTarget.renderConditionChildren()) {
-                        break;
+                    // 直接传递前面是否有显示的标记，避免每个节点都向上遍历
+                    parserTarget.renderConditionChildren(currentShowState);
+                    // 如果当前子节点变为显示状态，后面的节点都应该隐藏，更新标记
+                    if (next.isShow) {
+                        currentShowState = true;
                     }
                 }
 
