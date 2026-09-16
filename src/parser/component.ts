@@ -1,7 +1,7 @@
 import { AST, EXPRESSHANDLERTAG } from "@joker.front/ast";
 import { isEmptyStr, logger, noop, remove } from "@joker.front/shared";
 import { IParser } from "./parser";
-import { IS_DESTROY, JOKER_COMPONENT_TAG, getGlobalComponent } from "../component";
+import { IS_DESTROY, JOKER_COMPONENT_TAG, getGlobalComponent, registerGlobalComponent } from "../component";
 import { Component, SectionType } from "../component";
 import { observer } from "../observer";
 
@@ -184,6 +184,13 @@ export class ParserComponent extends IParser<
 
                 if (!(JOKER_COMPONENT_TAG in component)) {
                     component = (await component()).default;
+
+                    //异步解析完成后，写回注册表，避免下次渲染再次走异步加载
+                    if (this.ob.components[this.ast.tagName]) {
+                        this.ob.components[this.ast.tagName] = component;
+                    } else if (getGlobalComponent(this.ast.tagName)) {
+                        registerGlobalComponent(this.ast.tagName, component);
+                    }
                 }
 
                 //可能被销毁
